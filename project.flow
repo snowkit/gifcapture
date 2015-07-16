@@ -5,7 +5,7 @@
     author : 'Keymaster',
 
     app : {
-      name : 'moments encoder',
+      name : 'momentsEncoder',
       package : 'com.luxeengine.empty',
       main : 'Main'
     },

@@ -5,25 +5,25 @@ import sys.io.File;
 import sys.io.FileOutput;
 
 class GifEncoder {
-    var m_Width:Int;
-    var m_Height:Int;
-    var m_Repeat:Int = -1;                  // -1: no repeat, 0: infinite, >0: repeat count
-    var m_FrameDelay:Int = 0;               // Frame delay (milliseconds)
-    var m_HasStarted:Bool = false;          // Ready to output frames
-    var m_FileStream:FileOutput;
+    var Width:Int;
+    var Height:Int;
+    var Repeat:Int = -1;                  // -1: no repeat, 0: infinite, >0: repeat count
+    var FrameDelay:Int = 0;               // Frame delay (milliseconds)
+    var HasStarted:Bool = false;          // Ready to output frames
+    var FileStream:FileOutput;
 
-    var m_CurrentFrame:GifFrame;
-    var m_Pixels:Uint8Array;                // BGR Uint8Array array from frame
-    var m_IndexedPixels:Uint8Array;             // Converted frame indexed to palette
-    var m_ColorDepth:Int;                   // Number of bit planes
-    var m_ColorTab:Uint8Array;                  // RGB palette
-    var m_UsedEntry:Array<Bool>; //new Bool[256] :todo:; // Active palette entries
-    var m_PaletteSize:Int = 7;              // Color table size (bits-1)
-    var m_DisposalCode:Int = -1;            // Disposal code (-1 = use default)
-    var m_ShouldCloseStream:Bool = false;   // Close stream when finished
-    var m_IsFirstFrame:Bool = true;
-    var m_IsSizeSet:Bool = false;           // If false, get size from first frame
-    var m_SampleInterval:Int = 10;          // Default sample interval for quantizer
+    var CurrentFrame:GifFrame;
+    var Pixels:Uint8Array;                // BGR Uint8Array array from frame
+    var IndexedPixels:Uint8Array;             // Converted frame indexed to palette
+    var ColorDepth:Int;                   // Number of bit planes
+    var ColorTab:Uint8Array;                  // RGB palette
+    var UsedEntry:Array<Bool>; //new Bool[256] :todo:; // Active palette entries
+    var PaletteSize:Int = 7;              // Color table size (bits-1)
+    var DisposalCode:Int = -1;            // Disposal code (-1 = use default)
+    var ShouldCloseStream:Bool = false;   // Close stream when finished
+    var IsFirstFrame:Bool = true;
+    var IsSizeSet:Bool = false;           // If false, get size from first frame
+    var SampleInterval:Int = 10;          // Default sample interval for quantizer
 
     /// <summary>
     /// Constructor with the number of times the set of GIF frames should be played.
@@ -36,9 +36,9 @@ class GifEncoder {
     public function new(repeat:Int = -1, quality:Int = 10)
     {
         if (repeat >= 0)
-            m_Repeat = repeat;
-        m_SampleInterval = Std.int(Maths.clamp(quality, 1, 100));
-        m_UsedEntry = [for (i in 0...256) false];
+            Repeat = repeat;
+        SampleInterval = Std.int(Maths.clamp(quality, 1, 100));
+        UsedEntry = [for (i in 0...256) false];
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ class GifEncoder {
     /// <param name="ms">Delay time in milliseconds</param>
     public function SetDelay(ms:Int):Void
     {
-        m_FrameDelay = Math.round(ms / 10);
+        FrameDelay = Math.round(ms / 10);
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ class GifEncoder {
     public function SetFrameRate(fps:Float):Void
     {
         if (fps > 0)
-            m_FrameDelay = Math.round(100 / fps);
+            FrameDelay = Math.round(100 / fps);
     }
 
     /// <summary>
@@ -72,34 +72,34 @@ class GifEncoder {
         if (frame == null)
             throw "Can't add a null frame to the gif.";
 
-        if (!m_HasStarted)
+        if (!HasStarted)
             throw "Call Start() before adding frames to the gif.";
 
         // Use first frame's size
-        if (!m_IsSizeSet)
+        if (!IsSizeSet)
             SetSize(frame.Width, frame.Height);
 
-        m_CurrentFrame = frame;
+        CurrentFrame = frame;
         GetImagePixels();
         AnalyzePixels();
 
-        if (m_IsFirstFrame)
+        if (IsFirstFrame)
         {
             WriteLSD();
             WritePalette();
 
-            if (m_Repeat >= 0)
+            if (Repeat >= 0)
                 WriteNetscapeExt();
         }
 
         WriteGraphicCtrlExt();
         WriteImageDesc();
 
-        if (!m_IsFirstFrame)
+        if (!IsFirstFrame)
             WritePalette();
 
         WritePixels();
-        m_IsFirstFrame = false;
+        IsFirstFrame = false;
     }
 
     /// <summary>
@@ -111,16 +111,16 @@ class GifEncoder {
         if (os == null)
             throw "File output is null.";
 
-        m_ShouldCloseStream = false;
-        m_FileStream = os;
+        ShouldCloseStream = false;
+        FileStream = os;
 
         try {
-            m_FileStream.writeString("GIF89a"); // header
+            FileStream.writeString("GIF89a"); // header
         }
         catch (e:Dynamic) {
             throw e;
         }
-        m_HasStarted = true;
+        HasStarted = true;
     }
 
     /// <summary>
@@ -130,9 +130,9 @@ class GifEncoder {
     public function Start_File(file:String):Void
     {
         try {
-            m_FileStream = File.write(file);
-            Start_Output(m_FileStream);
-            m_ShouldCloseStream = true;
+            FileStream = File.write(file);
+            Start_Output(FileStream);
+            ShouldCloseStream = true;
         }
         catch (e:Dynamic) {
             throw e;
@@ -145,18 +145,18 @@ class GifEncoder {
     /// </summary>
     public function Finish():Void
     {
-        if (!m_HasStarted)
+        if (!HasStarted)
             throw "Can't finish a non-started gif.";
 
-        m_HasStarted = false;
+        HasStarted = false;
 
         try
         {
-            m_FileStream.writeByte(0x3b); // Gif trailer
-            m_FileStream.flush();
+            FileStream.writeByte(0x3b); // Gif trailer
+            FileStream.flush();
 
-            if (m_ShouldCloseStream)
-                m_FileStream.close();
+            if (ShouldCloseStream)
+                FileStream.close();
         }
         catch (e:Dynamic)
         {
@@ -164,39 +164,39 @@ class GifEncoder {
         }
 
         // Reset for subsequent use
-        m_FileStream = null;
-        m_CurrentFrame = null;
-        m_Pixels = null;
-        m_IndexedPixels = null;
-        m_ColorTab = null;
-        m_ShouldCloseStream = false;
-        m_IsFirstFrame = true;
+        FileStream = null;
+        CurrentFrame = null;
+        Pixels = null;
+        IndexedPixels = null;
+        ColorTab = null;
+        ShouldCloseStream = false;
+        IsFirstFrame = true;
     }
 
     // Sets the GIF frame size.
     function SetSize(w:Int, h:Int):Void
     {
-        m_Width = w;
-        m_Height = h;
-        m_IsSizeSet = true;
+        Width = w;
+        Height = h;
+        IsSizeSet = true;
     }
 
     // Extracts image pixels into byte array "pixels".
     function GetImagePixels():Void
     {
-        m_Pixels = new Uint8Array(3 * m_CurrentFrame.Width * m_CurrentFrame.Height);
-        var p = m_CurrentFrame.Data;
+        Pixels = new Uint8Array(3 * CurrentFrame.Width * CurrentFrame.Height);
+        var p = CurrentFrame.Data;
         var count:Int = 0;
 
         // Texture data is layered down-top, so flip it
-        for (th in -(m_CurrentFrame.Height - 1)...1)
+        for (th in -(CurrentFrame.Height - 1)...1)
         {
-            for (tw in 0...m_CurrentFrame.Width)
+            for (tw in 0...CurrentFrame.Width)
             {
-                var color = p[ -th * m_CurrentFrame.Width + tw];
-                m_Pixels[count] = color.r; count++;
-                m_Pixels[count] = color.g; count++;
-                m_Pixels[count] = color.b; count++;
+                var color = p[ -th * CurrentFrame.Width + tw];
+                Pixels[count] = color.r; count++;
+                Pixels[count] = color.g; count++;
+                Pixels[count] = color.b; count++;
             }
         }
     }
@@ -204,67 +204,67 @@ class GifEncoder {
     // Analyzes image colors and creates color map.
     function AnalyzePixels():Void
     {
-        var len = m_Pixels.length;
+        var len = Pixels.length;
         var nPix = Std.int(len / 3);
-        m_IndexedPixels = new Uint8Array(nPix);
-        var nq = new NeuQuant(m_Pixels, len, m_SampleInterval);
-        m_ColorTab = nq.Process(); // Create reduced palette
+        IndexedPixels = new Uint8Array(nPix);
+        var nq = new NeuQuant(Pixels, len, SampleInterval);
+        ColorTab = nq.Process(); // Create reduced palette
 
         // Map image pixels to new palette
         var k:Int = 0;
         for (i in 0...nPix)
         {
-            var index = nq.Map(m_Pixels[k++] & 0xff, m_Pixels[k++] & 0xff, m_Pixels[k++] & 0xff);
-            m_UsedEntry[index] = true;
-            m_IndexedPixels[i] = index; //(byte)index; :todo: does this have to be ported, if so, how?
+            var index = nq.Map(Pixels[k++] & 0xff, Pixels[k++] & 0xff, Pixels[k++] & 0xff);
+            UsedEntry[index] = true;
+            IndexedPixels[i] = index; //(byte)index; :todo: does this have to be ported, if so, how?
         }
 
-        m_Pixels = null;
-        m_ColorDepth = 8;
-        m_PaletteSize = 7;
+        Pixels = null;
+        ColorDepth = 8;
+        PaletteSize = 7;
     }
 
     // Writes Graphic Control Extension.
     function WriteGraphicCtrlExt():Void
     {
-        m_FileStream.writeByte(0x21); // Extension introducer
-        m_FileStream.writeByte(0xf9); // GCE label
-        m_FileStream.writeByte(4);    // Data block size
+        FileStream.writeByte(0x21); // Extension introducer
+        FileStream.writeByte(0xf9); // GCE label
+        FileStream.writeByte(4);    // Data block size
 
         // Packed fields
-        m_FileStream.writeByte(0 |     // 1:3 reserved
-                               0 |     // 4:6 disposal
-                               0 |     // 7   user input - 0 = none
-                               0 );    // 8   transparency flag
+        FileStream.writeByte(0 |     // 1:3 reserved
+                             0 |     // 4:6 disposal
+                             0 |     // 7   user input - 0 = none
+                             0 );    // 8   transparency flag
                                // :todo: Deleted a Convert.toByte, necessary?
 
-        WriteShort(m_FrameDelay); // Delay x 1/100 sec
-        m_FileStream.writeByte(0); // Transparent color index
-        m_FileStream.writeByte(0); // Block terminator
+        FileStream.writeInt16(FrameDelay); // Delay x 1/100 sec
+        FileStream.writeByte(0); // Transparent color index
+        FileStream.writeByte(0); // Block terminator
     }
 
     // Writes Image Descriptor.
     function WriteImageDesc():Void
     {
-        m_FileStream.writeByte(0x2c); // Image separator
-        WriteShort(0);                // Image position x,y = 0,0
-        WriteShort(0);
-        WriteShort(m_Width);          // image size
-        WriteShort(m_Height);
+        FileStream.writeByte(0x2c); // Image separator
+        FileStream.writeInt16(0);                // Image position x,y = 0,0
+        FileStream.writeInt16(0);
+        FileStream.writeInt16(Width);          // image size
+        FileStream.writeInt16(Height);
 
         // Packed fields
-        if (m_IsFirstFrame)
+        if (IsFirstFrame)
         {
-            m_FileStream.writeByte(0); // No LCT  - GCT is used for first (or only) frame
+            FileStream.writeByte(0); // No LCT  - GCT is used for first (or only) frame
         }
         else
         {
             // Specify normal LCT
-            m_FileStream.writeByte(0x80 |           // 1 local color table  1=yes
-                                      0 |              // 2 interlace - 0=no
-                                      0 |              // 3 sorted - 0=no
-                                      0 |              // 4-5 reserved
-                                      m_PaletteSize); // 6-8 size of color table
+            FileStream.writeByte(0x80 |           // 1 local color table  1=yes
+                                    0 |              // 2 interlace - 0=no
+                                    0 |              // 3 sorted - 0=no
+                                    0 |              // 4-5 reserved
+                                    PaletteSize); // 6-8 size of color table
         }
     }
 
@@ -272,54 +272,46 @@ class GifEncoder {
     function WriteLSD():Void
     {
         // Logical screen size
-        WriteShort(m_Width);
-        WriteShort(m_Height);
+        FileStream.writeInt16(Width);
+        FileStream.writeInt16(Height);
 
         // Packed fields
-        m_FileStream.writeByte(0x80 |           // 1   : global color table flag = 1 (gct used)
-                               0x70 |           // 2-4 : color resolution = 7
-                               0x00 |           // 5   : gct sort flag = 0
-                               m_PaletteSize); // 6-8 : gct size
+        FileStream.writeByte(0x80 |           // 1   : global color table flag = 1 (gct used)
+                             0x70 |           // 2-4 : color resolution = 7
+                             0x00 |           // 5   : gct sort flag = 0
+                             PaletteSize); // 6-8 : gct size
 
-        m_FileStream.writeByte(0); // Background color index
-        m_FileStream.writeByte(0); // Pixel aspect ratio - assume 1:1
+        FileStream.writeByte(0); // Background color index
+        FileStream.writeByte(0); // Pixel aspect ratio - assume 1:1
     }
 
     // Writes Netscape application extension to define repeat count.
     function WriteNetscapeExt():Void
     {
-        m_FileStream.writeByte(0x21);    // Extension introducer
-        m_FileStream.writeByte(0xff);    // App extension label
-        m_FileStream.writeByte(11);      // Block size
-        m_FileStream.writeString("NETSCAPE" + "2.0"); // App id + auth code
-        m_FileStream.writeByte(3);       // Sub-block size
-        m_FileStream.writeByte(1);       // Loop sub-block id
-        WriteShort(m_Repeat);            // Loop count (extra iterations, 0=repeat forever)
-        m_FileStream.writeByte(0);       // Block terminator
+        FileStream.writeByte(0x21);    // Extension introducer
+        FileStream.writeByte(0xff);    // App extension label
+        FileStream.writeByte(11);      // Block size
+        FileStream.writeString("NETSCAPE" + "2.0"); // App id + auth code
+        FileStream.writeByte(3);       // Sub-block size
+        FileStream.writeByte(1);       // Loop sub-block id
+        FileStream.writeInt16(Repeat);            // Loop count (extra iterations, 0=repeat forever)
+        FileStream.writeByte(0);       // Block terminator
     }
 
     // Write color table.
     function WritePalette():Void
     {
-        m_FileStream.write(m_ColorTab.toBytes());
-        var n:Int = (3 * 256) - m_ColorTab.length;
+        FileStream.write(ColorTab.toBytes());
+        var n:Int = (3 * 256) - ColorTab.length;
 
         for (i in 0...n)
-            m_FileStream.writeByte(0);
+            FileStream.writeByte(0);
     }
 
     // Encodes and writes pixel data.
     function WritePixels():Void
     {
-        var encoder = new LzwEncoder(m_Width, m_Height, m_IndexedPixels, m_ColorDepth);
-        encoder.Encode(m_FileStream);
-    }
-
-    // Write 16-bit value to output stream, LSB first.
-    function WriteShort(value:Int):Void
-    {
-        m_FileStream.writeInt16(value);
-        //m_FileStream.writeByte(value & 0xff); // :todo: Convert.toByte left out in both of these
-        //m_FileStream.writeByte((value >> 8) & 0xff);
+        var encoder = new LzwEncoder(Width, Height, IndexedPixels, ColorDepth);
+        encoder.Encode(FileStream);
     }
 }
