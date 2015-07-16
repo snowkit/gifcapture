@@ -1,4 +1,5 @@
 package moments.encoder;
+import snow.api.buffers.Int32Array;
 import snow.api.buffers.Uint8Array;
 
 class NeuQuant {
@@ -49,19 +50,19 @@ class NeuQuant {
     var thepicture:Uint8Array; // The input image itself
     var lengthcount:Int; // Lengthcount = H*W*3
     var samplefac:Int; // Sampling factor 1..30
-    var network:Array<Array<Int>>; // The network itself - [netsize][4]
-    var netindex:Array<Int>;// = new int[256]; // For network lookup - really 256
-    var bias:Array<Int>;// = new int[netsize]; // Bias and freq arrays for learning
-    var freq:Array<Int>;// = new int[netsize];
-    var radpower:Array<Int>;// = new int[initrad]; // Radpower for precomputation
+    var network:Array<Array<Int>>; // The network itself - [netsize][4] //:todo: Convert to flat Int32Array?
+    var netindex:Int32Array; // For network lookup - really 256
+    var bias:Int32Array; // Bias and freq arrays for learning
+    var freq:Int32Array;
+    var radpower:Int32Array; // Radpower for precomputation
 
     // Initialize network in range (0,0,0) to (255,255,255) and set parameters
     public function new(thepic:Uint8Array, len:Int, sample:Int)
     {
-        netindex = [for (i in 0...256) 0];
-        bias = [for (i in 0...netsize) 0];
-        freq = [for (i in 0...netsize) 0];
-        radpower = [for (i in 0...initrad) 0];
+        netindex = new Int32Array(256);
+        bias = new Int32Array(netsize);
+        freq = new Int32Array(netsize);
+        radpower = new Int32Array(initrad);
         var p:Array<Int>;
 
         thepicture = thepic;

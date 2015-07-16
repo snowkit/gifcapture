@@ -1,4 +1,5 @@
 package moments.encoder;
+import snow.api.buffers.Int32Array;
 import snow.api.buffers.Uint8Array;
 
 class LzwEncoder {
@@ -35,8 +36,8 @@ class LzwEncoder {
     var maxcode:Int; // maximum code, given n_bits
     var maxmaxcode:Int = 1 << BITS; // should NEVER generate this code
 
-    var htab:Array<Int>;// = new int[HSIZE];
-    var codetab:Array<Int>;// = new int[HSIZE];
+    var htab:Int32Array;
+    var codetab:Int32Array;
 
     var hsize:Int = HSIZE; // for dynamic table sizing
 
@@ -113,8 +114,8 @@ class LzwEncoder {
         pixAry = pixels;
         initCodeSize = Std.int(Math.max(2, color_depth));
         
-        htab = [for (i in 0...HSIZE) 0];
-        codetab = [for (i in 0...HSIZE) 0];
+        htab = new Int32Array(HSIZE);
+        codetab = new Int32Array(HSIZE);
         accum = new Uint8Array(256);
     }
 

@@ -16,7 +16,7 @@ class GifEncoder {
     var IndexedPixels:Uint8Array;             // Converted frame indexed to palette
     var ColorDepth:Int;                   // Number of bit planes
     var ColorTab:Uint8Array;                  // RGB palette
-    var UsedEntry:Array<Bool>; //new Bool[256] :todo:; // Active palette entries
+    var UsedEntry:Array<Bool>;            // Active palette entries
     var PaletteSize:Int = 7;              // Color table size (bits-1)
     var DisposalCode:Int = -1;            // Disposal code (-1 = use default)
     var ShouldCloseStream:Bool = false;   // Close stream when finished
