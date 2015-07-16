@@ -1,5 +1,6 @@
 package;
 
+import snow.api.buffers.Uint8Array;
 import luxe.Input;
 import moments.encoder.GifEncoder;
 import moments.encoder.GifFrame;
@@ -7,31 +8,31 @@ import sys.io.File;
 
 class Main extends luxe.Game {
 	override function ready() {
-        var encoder = new GifEncoder(0, 10);
-        encoder.SetDelay(10);
+        var encoder = new GifEncoder(-1, 10);
+        encoder.SetDelay(1000);
         
         var frame1:GifFrame = {
-            Width:4,
-            Height:1,
-            Data:[new Color32(255, 255, 255, 255), new Color32(0,0,0,255), new Color32(0,0,0,255), new Color32(0,0,0,255)]
+            Width:2,
+            Height:2,
+            Data:new Uint8Array([255,255,255, 0,0,0, 0,0,0, 0,0,0])
         }
         
         var frame2:GifFrame = {
-            Width:4,
-            Height:1,
-            Data:[new Color32(0,0,0,255), new Color32(255, 255, 255, 255), new Color32(0,0,0,255), new Color32(0,0,0,255)]
+            Width:2,
+            Height:2,
+            Data:new Uint8Array([0,0,0, 255,255,255, 0,0,0, 0,0,0])
         }
         
         var frame3:GifFrame = {
-            Width:4,
-            Height:1,
-            Data:[new Color32(0,0,0,255), new Color32(0,0,0,255), new Color32(255, 255, 255, 255), new Color32(0,0,0,255)]
+            Width:2,
+            Height:2,
+            Data:new Uint8Array([0,0,0, 0,0,0, 255,255,255, 0,0,0])
         }
         
         var frame4:GifFrame = {
-            Width:4,
-            Height:1,
-            Data:[new Color32(0,0,0,255), new Color32(0,0,0,255), new Color32(0,0,0,255), new Color32(255, 255, 255, 255)]
+            Width:2,
+            Height:2,
+            Data:new Uint8Array([0,0,0, 0,0,0, 0,0,0, 255,255,255])
         }
         
         encoder.Start_File('out.gif');

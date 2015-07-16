@@ -13,7 +13,6 @@ class GifEncoder {
     var FileStream:FileOutput;
 
     var CurrentFrame:GifFrame;
-    var Pixels:Uint8Array;                // BGR Uint8Array array from frame
     var IndexedPixels:Uint8Array;             // Converted frame indexed to palette
     var ColorDepth:Int;                   // Number of bit planes
     var ColorTab:Uint8Array;                  // RGB palette
@@ -80,7 +79,6 @@ class GifEncoder {
             SetSize(frame.Width, frame.Height);
 
         CurrentFrame = frame;
-        GetImagePixels();
         AnalyzePixels();
 
         if (IsFirstFrame)
@@ -166,7 +164,6 @@ class GifEncoder {
         // Reset for subsequent use
         FileStream = null;
         CurrentFrame = null;
-        Pixels = null;
         IndexedPixels = null;
         ColorTab = null;
         ShouldCloseStream = false;
@@ -181,45 +178,24 @@ class GifEncoder {
         IsSizeSet = true;
     }
 
-    // Extracts image pixels into byte array "pixels".
-    function GetImagePixels():Void
-    {
-        Pixels = new Uint8Array(3 * CurrentFrame.Width * CurrentFrame.Height);
-        var p = CurrentFrame.Data;
-        var count:Int = 0;
-
-        // Texture data is layered down-top, so flip it
-        for (th in -(CurrentFrame.Height - 1)...1)
-        {
-            for (tw in 0...CurrentFrame.Width)
-            {
-                var color = p[ -th * CurrentFrame.Width + tw];
-                Pixels[count] = color.r; count++;
-                Pixels[count] = color.g; count++;
-                Pixels[count] = color.b; count++;
-            }
-        }
-    }
-
     // Analyzes image colors and creates color map.
     function AnalyzePixels():Void
     {
-        var len = Pixels.length;
+        var len = CurrentFrame.Data.length;
         var nPix = Std.int(len / 3);
         IndexedPixels = new Uint8Array(nPix);
-        var nq = new NeuQuant(Pixels, len, SampleInterval);
+        var nq = new NeuQuant(CurrentFrame.Data, len, SampleInterval);
         ColorTab = nq.Process(); // Create reduced palette
 
         // Map image pixels to new palette
         var k:Int = 0;
         for (i in 0...nPix)
         {
-            var index = nq.Map(Pixels[k++] & 0xff, Pixels[k++] & 0xff, Pixels[k++] & 0xff);
+            var index = nq.Map(CurrentFrame.Data[k++] & 0xff, CurrentFrame.Data[k++] & 0xff, CurrentFrame.Data[k++] & 0xff);
             UsedEntry[index] = true;
             IndexedPixels[i] = index; //(byte)index; :todo: does this have to be ported, if so, how?
         }
 
-        Pixels = null;
         ColorDepth = 8;
         PaletteSize = 7;
     }
