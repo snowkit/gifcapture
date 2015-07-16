@@ -1,0 +1,24 @@
+{
+  project : {
+    name : 'empty',
+    version : '1.0.0',
+    author : 'Keymaster',
+
+    app : {
+      name : 'moments encoder',
+      package : 'com.luxeengine.empty',
+      main : 'Main'
+    },
+
+    build : {
+      dependencies : {
+        luxe : '*',
+      }
+    },
+
+    files : {
+      config : 'config.json',
+      assets : 'assets/'
+    }
+  }
+}
