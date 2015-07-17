@@ -1,6 +1,7 @@
 package;
 
 import phoenix.geometry.QuadGeometry;
+import phoenix.RenderTexture;
 import snow.api.buffers.Uint8Array;
 import luxe.Input;
 import moments.encoder.GifEncoder;
@@ -13,6 +14,7 @@ class Main extends luxe.Game {
     var encoder:GifEncoder;
     var frame:GifFrame;
     var timestamp:Float;
+    var target:RenderTexture;
 	override function ready() {
         
         boxGeom = Luxe.draw.box( {
@@ -22,15 +24,21 @@ class Main extends luxe.Game {
            y:100
         });
         
-        encoder = new GifEncoder(-1, 100, true);
+        encoder = new GifEncoder(0, 100, true);
         encoder.Start_File('screenTest.gif');
         
         frame = {
-            Width:Luxe.screen.w,
-            Height:Luxe.screen.h,
-            Data:new Uint8Array(Luxe.screen.w * Luxe.screen.h * 3)
+            Width:Std.int(Luxe.screen.w / 6),
+            Height:Std.int(Luxe.screen.h / 6),
+            Data:new Uint8Array(Std.int(Luxe.screen.w / 6) * Std.int(Luxe.screen.h / 6) * 3)
         }
         timestamp = Luxe.time;
+        
+        target = new RenderTexture( {
+            id:'targetTex',
+            width:frame.Width,
+            height:frame.Height
+        });
         
         /*
         encoder.Start_File('out.gif');
@@ -73,14 +81,23 @@ class Main extends luxe.Game {
 	}
     
     override public function onpostrender() {
-        GL.readPixels(0, 0, Luxe.screen.w, Luxe.screen.h, GL.RGB, GL.UNSIGNED_BYTE, frame.Data);
+        Luxe.renderer.target = target;
+        Luxe.renderer.clear(Luxe.renderer.clear_color);
+        Luxe.renderer.batcher.view.viewport.w = frame.Width;
+        Luxe.renderer.batcher.view.viewport.h = frame.Height;
+        Luxe.renderer.batcher.draw();
+        
+        GL.readPixels(0, 0, frame.Width, frame.Height, GL.RGB, GL.UNSIGNED_BYTE, frame.Data);
+        Luxe.renderer.target = null;
+        
+        Luxe.renderer.batcher.view.viewport.w = Luxe.screen.w;
+        Luxe.renderer.batcher.view.viewport.h = Luxe.screen.h;
+        
         timestamp = Luxe.time;
         encoder.AddFrame(frame);
         trace(Luxe.time - timestamp);
         timestamp = Luxe.time;
         encoder.SetDelay(Std.int(Luxe.dt * 1000));
-        //encoder.Finish();
-        //Luxe.shutdown();
     }
 
 	override function update(dt:Float) {
