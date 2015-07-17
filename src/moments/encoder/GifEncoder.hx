@@ -13,6 +13,8 @@ class GifEncoder {
     var FileStream:FileOutput;
 
     var CurrentFrame:GifFrame;
+    var Pixels:Uint8Array;
+    var FlippedY:Bool = false;
     var IndexedPixels:Uint8Array;             // Converted frame indexed to palette
     var ColorDepth:Int;                   // Number of bit planes
     var ColorTab:Uint8Array;                  // RGB palette
@@ -32,12 +34,13 @@ class GifEncoder {
     /// the maximum 256 colors allowed by the GIF specification). Lower values (minimum = 1)
     /// produce better colors, but slow processing significantly. Higher values will speed
     /// up the quantization pass at the cost of lower image quality (maximum = 100).</param>
-    public function new(repeat:Int = -1, quality:Int = 10)
+    public function new(repeat:Int = -1, quality:Int = 10, flippedY:Bool = false )
     {
         if (repeat >= 0)
             Repeat = repeat;
         SampleInterval = Std.int(Maths.clamp(quality, 1, 100));
         UsedEntry = [for (i in 0...256) false];
+        FlippedY = flippedY;
     }
 
     /// <summary>
@@ -79,6 +82,7 @@ class GifEncoder {
             SetSize(frame.Width, frame.Height);
 
         CurrentFrame = frame;
+        GetImagePixels();
         AnalyzePixels();
 
         if (IsFirstFrame)
@@ -177,25 +181,37 @@ class GifEncoder {
         Height = h;
         IsSizeSet = true;
     }
+    
+    function GetImagePixels():Void {
+        if (!FlippedY) {
+            Pixels = CurrentFrame.Data;
+        }
+        else {
+            if(Pixels == null) Pixels = new Uint8Array(CurrentFrame.Data.length);
+            for (y in 0...CurrentFrame.Height) {
+                Pixels.set(CurrentFrame.Data.subarray((CurrentFrame.Height - 1 - y) * CurrentFrame.Width * 3, (CurrentFrame.Height - y) * CurrentFrame.Width * 3), y * CurrentFrame.Width * 3);
+            }
+        }
+    }
 
     // Analyzes image colors and creates color map.
     function AnalyzePixels():Void
     {
-        var len = CurrentFrame.Data.length;
+        var len = Pixels.length;
         var nPix = Std.int(len / 3);
         IndexedPixels = new Uint8Array(nPix);
-        var nq = new NeuQuant(CurrentFrame.Data, len, SampleInterval);
+        var nq = new NeuQuant(Pixels, len, SampleInterval);
         ColorTab = nq.Process(); // Create reduced palette
 
         // Map image pixels to new palette
         var k:Int = 0;
         for (i in 0...nPix)
         {
-            var index = nq.Map(CurrentFrame.Data[k++] & 0xff, CurrentFrame.Data[k++] & 0xff, CurrentFrame.Data[k++] & 0xff);
+            var index = nq.Map(Pixels[k++] & 0xff, Pixels[k++] & 0xff, Pixels[k++] & 0xff);
             UsedEntry[index] = true;
             IndexedPixels[i] = index; //(byte)index; :todo: does this have to be ported, if so, how?
         }
-
+        //Pixels = null; :todo: Null & recreate this every time or keep it around? how would that work with flipped/non-flipped?
         ColorDepth = 8;
         PaletteSize = 7;
     }
