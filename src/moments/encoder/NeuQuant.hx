@@ -50,7 +50,7 @@ class NeuQuant {
     var thepicture:Uint8Array; // The input image itself
     var lengthcount:Int; // Lengthcount = H*W*3
     var samplefac:Int; // Sampling factor 1..30
-    var network:Int32Array; // The network itself - [netsize][4] //:todo: Convert to flat Int32Array?
+    var network:Int32Array; // The network itself - [netsize][4]
     var netindex:Int32Array; // For network lookup - really 256
     var bias:Int32Array; // Bias and freq arrays for learning
     var freq:Int32Array;

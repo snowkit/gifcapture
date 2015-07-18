@@ -2,21 +2,19 @@ package;
 
 import phoenix.geometry.QuadGeometry;
 import phoenix.RenderTexture;
+import snow.api.buffers.Int32Array;
 import snow.api.buffers.Uint8Array;
 import luxe.Input;
 import moments.encoder.GifEncoder;
 import moments.encoder.GifFrame;
 import snow.modules.opengl.GL;
 import sys.io.File;
-
+import Recorder;
 class Main extends luxe.Game {
     var boxGeom:QuadGeometry;
-    var encoder:GifEncoder;
-    var frame:GifFrame;
-    var timestamp:Float;
-    var target:RenderTexture;
+    var recorder:Recorder;
+    
 	override function ready() {
-        
         boxGeom = Luxe.draw.box( {
            w:50,
            h:50,
@@ -24,83 +22,47 @@ class Main extends luxe.Game {
            y:100
         });
         
-        encoder = new GifEncoder(0, 100, true);
-        encoder.Start_File('screenTest.gif');
-        
-        frame = {
-            Width:Std.int(Luxe.screen.w / 6),
-            Height:Std.int(Luxe.screen.h / 6),
-            Data:new Uint8Array(Std.int(Luxe.screen.w / 6) * Std.int(Luxe.screen.h / 6) * 3)
-        }
-        timestamp = Luxe.time;
-        
-        target = new RenderTexture( {
-            id:'targetTex',
-            width:frame.Width,
-            height:frame.Height
-        });
-        
-        /*
-        encoder.Start_File('out.gif');
-        var frame1:GifFrame = {
-            Width:2,
-            Height:2,
-            Data:new Uint8Array([255,255,255, 0,0,0, 0,0,0, 0,0,0])
-        }
-        
-        var frame2:GifFrame = {
-            Width:2,
-            Height:2,
-            Data:new Uint8Array([0,0,0, 255,255,255, 0,0,0, 0,0,0])
-        }
-        
-        var frame3:GifFrame = {
-            Width:2,
-            Height:2,
-            Data:new Uint8Array([0,0,0, 0,0,0, 255,255,255, 0,0,0])
-        }
-        
-        var frame4:GifFrame = {
-            Width:2,
-            Height:2,
-            Data:new Uint8Array([0,0,0, 0,0,0, 0,0,0, 255,255,255])
-        }
-        encoder.AddFrame(frame1);
-        encoder.AddFrame(frame2);
-        encoder.AddFrame(frame3);
-        encoder.AddFrame(frame4);
-        encoder.Finish();
-        */
-	}
-
+        recorder = new Recorder(Std.int(Luxe.screen.w / 2), Std.int(Luxe.screen.h / 2), 60, 10, 100, 0);
+    }
+    
 	override function onkeyup(e:KeyEvent) {
 		if (e.keycode == Key.escape) {
-            encoder.Finish();
 			Luxe.shutdown();
         }
 	}
     
+    override public function onkeydown(event:KeyEvent) {
+        switch(event.keycode) {
+           case Key.space:
+               if (recorder.state == RecorderState.Paused) {
+                   trace('turn on recording');
+                  recorder.record();
+               }
+               else if (recorder.state == RecorderState.Recording) {
+                  recorder.pause(); 
+               }
+           case Key.key_r:
+               recorder.reset();
+           case Key.f1:
+               recorder.save('recording.gif');
+        }
+    }
+    
     override public function onpostrender() {
-        Luxe.renderer.target = target;
-        Luxe.renderer.clear(Luxe.renderer.clear_color);
-        Luxe.renderer.batcher.view.viewport.w = frame.Width;
-        Luxe.renderer.batcher.view.viewport.h = frame.Height;
-        Luxe.renderer.batcher.draw();
-        
-        GL.readPixels(0, 0, frame.Width, frame.Height, GL.RGB, GL.UNSIGNED_BYTE, frame.Data);
-        Luxe.renderer.target = null;
-        
-        Luxe.renderer.batcher.view.viewport.w = Luxe.screen.w;
-        Luxe.renderer.batcher.view.viewport.h = Luxe.screen.h;
-        
-        timestamp = Luxe.time;
-        encoder.AddFrame(frame);
-        trace(Luxe.time - timestamp);
-        timestamp = Luxe.time;
-        encoder.SetDelay(Std.int(Luxe.dt * 1000));
+        recorder.onFrameRendered();
     }
 
 	override function update(dt:Float) {
+        if (recorder.state == RecorderState.Saving) {
+            Luxe.draw.box( {
+               x:0,
+               y:10,
+               w:Luxe.screen.w * (recorder.lastSavedFrame / recorder.frameCount),
+               h:20,
+               immediate:true
+            });
+        }
+        
         if (Luxe.input.keydown(Key.key_a)) {
             boxGeom.transform.pos.x -= 200 * dt;
         }
