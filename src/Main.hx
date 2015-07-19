@@ -54,6 +54,7 @@ class Main extends luxe.Game {
     }
 
 	override function update(dt:Float) {
+        recorder.update();
         if (recorder.state == RecorderState.Saving) {
             Luxe.draw.box( {
                x:0,
