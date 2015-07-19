@@ -46,6 +46,10 @@ class Recorder {
         Runner.init();
     }
     
+    public function update() {
+        Runner.run();
+    }
+    
     public function pause() {
         if (state == Saving) {
             trace("Gif recorder / Recorder can't be paused while saving data. The recorder is paused automatically during saving");
@@ -84,7 +88,13 @@ class Recorder {
         Runner.thread(saveThreadFunc.bind(path));
     }
     
+    function onEncodingFinished():Void {
+        trace(savingTime);
+    }
+    
+    var savingTime:Float = 0;
     function saveThreadFunc(path:String):Void {
+        var t = Luxe.time;
         trace('Gif recorder / Started background thread for saving');
         var encoder = new GifEncoder(repeat, quality, true);
         encoder.SetDelay(Math.round(1000 * minTimePerFrame));
@@ -111,6 +121,8 @@ class Recorder {
         lastSavedFrame = -1;
         reset();
         trace('Gif recorder / Encoding finished');
+        savingTime = Luxe.time - t;
+        Runner.call_primary(onEncodingFinished);
     }
     
     public function onFrameRendered() {
