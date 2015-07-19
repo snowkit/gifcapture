@@ -8,7 +8,7 @@ import Runner;
 
 class Recorder {
     public var state(default, null):RecorderState = Paused;
-    public var lastSavedFrame(default, null):Int = 0;
+    public var lastSavedFrame(default, null):Int = -1;
     
     var encoder:GifEncoder;
     var quality:Int;
@@ -18,19 +18,20 @@ class Recorder {
     var frameHeight:Int;
     
     var savedFrames:Array<Uint8Array>;
-    var timePerFrame:Float;
+    var frameDelays:Array<Float>;
+    var minTimePerFrame:Float;
     var maxRecordingTime:Float;
     var maxFrames:Int;
     public var frameCount(default, null):Int = 0;
     
     var timeSinceLastSave:Float = 0;
     
-    public function new(_frameWidth:Int, _frameHeight:Int, _fps:Int, _maxTime:Float, _quality:Int = 10, _repeat:Int = -1) {
+    public function new(_frameWidth:Int, _frameHeight:Int, _maxFps:Int, _maxTime:Float, _quality:Int = 10, _repeat:Int = -1) {
         frameWidth = _frameWidth;
         frameHeight = _frameHeight;
-        timePerFrame = 1 / _fps;
+        minTimePerFrame = 1 / _maxFps;
         maxRecordingTime = _maxTime;
-        maxFrames = Math.round(_maxTime * _fps);
+        maxFrames = Math.round(_maxTime * _maxFps);
         quality = _quality;
         repeat = _repeat;
         
@@ -41,6 +42,7 @@ class Recorder {
         });
         
         savedFrames = [];
+        frameDelays = [];
         Runner.init();
     }
     
@@ -85,7 +87,7 @@ class Recorder {
     function saveThreadFunc(path:String):Void {
         trace('Gif recorder / Started background thread for saving');
         var encoder = new GifEncoder(repeat, quality, true);
-        encoder.SetDelay(Math.round(timePerFrame * 1000));
+        encoder.SetDelay(Math.round(1000 * minTimePerFrame));
         encoder.Start_File(path);
         var gifFrame = {
             Width:frameWidth,
@@ -94,7 +96,11 @@ class Recorder {
         }
         trace('Gif recorder / Starting gif encoding');
         
-        for (i in 0...frameCount) {
+        encoder.AddFrame(gifFrame);
+        lastSavedFrame = 0;
+        
+        for (i in 1...frameCount) {
+            encoder.SetDelay(Math.round(1000 * frameDelays[i]));
             gifFrame.Data = savedFrames[i];
             encoder.AddFrame(gifFrame);
             lastSavedFrame = i;
@@ -102,22 +108,26 @@ class Recorder {
         
         encoder.Finish();
         state = Paused;
-        lastSavedFrame = 0;
+        lastSavedFrame = -1;
         reset();
         trace('Gif recorder / Encoding finished');
     }
     
     public function onFrameRendered() {
         if (state != Recording) return;
-        if (Luxe.time - timeSinceLastSave >= timePerFrame) {
+        if (Luxe.time - timeSinceLastSave >= minTimePerFrame) {
             var oldViewportSize = new Vector(Luxe.renderer.batcher.view.viewport.w, Luxe.renderer.batcher.view.viewport.h);
             Luxe.renderer.batcher.view.viewport.set(null, null, frameWidth, frameHeight);
             Luxe.renderer.target = targetTex;
             Luxe.renderer.clear(Luxe.renderer.clear_color);
             Luxe.renderer.batcher.draw();
-            if (savedFrames.length == frameCount) savedFrames.push(new Uint8Array(frameWidth * frameHeight * 4));
+            if (savedFrames.length == frameCount) {
+                savedFrames.push(new Uint8Array(frameWidth * frameHeight * 4));
+                frameDelays.push(0);
+            }
             GL.readPixels(0, 0, frameWidth, frameHeight, GL.RGBA, GL.UNSIGNED_BYTE, savedFrames[frameCount]);
             Luxe.renderer.target = null;
+            frameDelays[frameCount] = Luxe.time - timeSinceLastSave;
             frameCount++;
             if (frameCount == maxFrames) {
                 state = Paused;

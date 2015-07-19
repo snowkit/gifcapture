@@ -47,7 +47,7 @@ class GifEncoder {
     /// Sets the delay time between each frame, or changes it for subsequent frames (applies
     /// to last frame added).
     /// </summary>
-    /// <param name="ms">Delay time in milliseconds</param>
+    /// <param name="ms">Delay time in microseconds</param>
     public function SetDelay(ms:Int):Void
     {
         FrameDelay = Math.round(ms / 10);
@@ -197,7 +197,6 @@ class GifEncoder {
                     lineOffset = (CurrentFrame.Height - 1 - y) * CurrentFrame.Width * 4;
                     Pixels.set(CurrentFrame.Data.subarray(lineOffset + x * 4, lineOffset + x * 4 + 3), y * CurrentFrame.Width * 3 + x * 3);
                 }
-                //Pixels.set(CurrentFrame.Data.subarray((CurrentFrame.Height - 1 - y) * CurrentFrame.Width * 3, (CurrentFrame.Height - y) * CurrentFrame.Width * 3), y * CurrentFrame.Width * 3);
             }
         }
     }
