@@ -1,4 +1,5 @@
 package ;
+import luxe.Vector;
 import moments.encoder.GifEncoder;
 import phoenix.RenderTexture;
 import snow.api.buffers.Uint8Array;
@@ -7,8 +8,6 @@ import Runner;
 
 class Recorder {
     public var state(default, null):RecorderState = Paused;
-    //public var recording(default, set):Bool = false;
-    //var saving:Bool = false;
     public var lastSavedFrame(default, null):Int = 0;
     
     var encoder:GifEncoder;
@@ -81,25 +80,6 @@ class Recorder {
         state = Saving;
         
         Runner.thread(saveThreadFunc.bind(path));
-        /*
-        var encoder = new GifEncoder(0, 10, true);
-        encoder.SetDelay(Math.round(timePerFrame * 1000));
-        encoder.Start_File(path);
-        var gifFrame = {
-            Width:frameWidth,
-            Height:frameHeight,
-            Data:savedFrames[0]
-        }
-        trace('Gif recorder / Starting gif encoding');
-        
-        for (frame in savedFrames) {
-            gifFrame.Data = frame;
-            encoder.AddFrame(gifFrame);
-        }
-        
-        encoder.Finish();
-        trace('Gif recorder / Encoding finished');*/
-        //reset();
     }
     
     function saveThreadFunc(path:String):Void {
@@ -130,21 +110,20 @@ class Recorder {
     public function onFrameRendered() {
         if (state != Recording) return;
         if (Luxe.time - timeSinceLastSave >= timePerFrame) {
-            Luxe.renderer.batcher.view.viewport.w = frameWidth;
-            Luxe.renderer.batcher.view.viewport.h = frameHeight;
+            var oldViewportSize = new Vector(Luxe.renderer.batcher.view.viewport.w, Luxe.renderer.batcher.view.viewport.h);
+            Luxe.renderer.batcher.view.viewport.set(null, null, frameWidth, frameHeight);
             Luxe.renderer.target = targetTex;
             Luxe.renderer.clear(Luxe.renderer.clear_color);
             Luxe.renderer.batcher.draw();
-            if (savedFrames.length == frameCount) savedFrames.push(new Uint8Array(frameWidth * frameHeight * 3));
-            GL.readPixels(0, 0, frameWidth, frameHeight, GL.RGB, GL.UNSIGNED_BYTE, savedFrames[frameCount]);
+            if (savedFrames.length == frameCount) savedFrames.push(new Uint8Array(frameWidth * frameHeight * 4));
+            GL.readPixels(0, 0, frameWidth, frameHeight, GL.RGBA, GL.UNSIGNED_BYTE, savedFrames[frameCount]);
             Luxe.renderer.target = null;
             frameCount++;
             if (frameCount == maxFrames) {
                 state = Paused;
                 trace('Gif recorder / Max frames reached!');
             }
-            Luxe.renderer.batcher.view.viewport.w = Luxe.screen.w;
-            Luxe.renderer.batcher.view.viewport.h = Luxe.screen.h;
+            Luxe.renderer.batcher.view.viewport.set(null, null, oldViewportSize.x, oldViewportSize.y);
             
             timeSinceLastSave = Luxe.time;
         }

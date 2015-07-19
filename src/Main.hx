@@ -33,18 +33,19 @@ class Main extends luxe.Game {
     
     override public function onkeydown(event:KeyEvent) {
         switch(event.keycode) {
-           case Key.space:
-               if (recorder.state == RecorderState.Paused) {
-                   trace('turn on recording');
-                  recorder.record();
-               }
-               else if (recorder.state == RecorderState.Recording) {
-                  recorder.pause(); 
-               }
-           case Key.key_r:
-               recorder.reset();
-           case Key.f1:
-               recorder.save('recording.gif');
+            case Key.space:
+                if (recorder.state == RecorderState.Paused) {
+                    trace('turn on recording');
+                    recorder.record();
+                }
+                else if (recorder.state == RecorderState.Recording) {
+                    trace('pause recording');
+                    recorder.pause();
+                }
+            case Key.key_r:
+                recorder.reset();
+            case Key.f1:
+                recorder.save('recording.gif');
         }
     }
     
