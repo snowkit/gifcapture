@@ -44,7 +44,7 @@ class Main extends luxe.Game {
                 }
             case Key.key_r:
                 recorder.reset();
-            case Key.f1:
+            case Key.key_1:
                 recorder.save('recording.gif');
         }
     }

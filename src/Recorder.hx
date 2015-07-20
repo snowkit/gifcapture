@@ -52,7 +52,9 @@ class Recorder {
     
     public function pause() {
         if (state == Saving) {
-            trace("Gif recorder / Recorder can't be paused while saving data. The recorder is paused automatically during saving");
+            #if !no_gif_logging
+                trace("Gif recorder / Recorder can't be paused while saving data. The recorder is paused automatically during saving"); 
+            #end
             return;
         }
         
@@ -61,7 +63,9 @@ class Recorder {
     
     public function record() {
         if (state == Saving) {
-            trace("Gif recorder / Can't start recording while the recorder is saving!");
+            #if !no_gif_logging
+                trace("Gif recorder / Can't start recording while the recorder is saving!");
+            #end
             return;
         }
         
@@ -70,7 +74,9 @@ class Recorder {
     
     public function reset() {
         if (state == Saving) {
-            trace("Gif recorder / Can't reset the recorder while saving!");
+            #if !no_gif_logging
+                trace("Gif recorder / Can't reset the recorder while saving!");
+            #end
             return;
         }
         frameCount = 0;
@@ -79,23 +85,28 @@ class Recorder {
     
     public function save(path:String) {
         if (frameCount == 0) {
-            trace('Gif recorder / Attempted save, but nothing has been recorded!');
+            #if !no_gif_logging
+                trace('Gif recorder / Attempted save, but nothing has been recorded!');
+            #end
             return;
         }
         
         state = Saving;
-        
+        #if !no_gif_logging
+            trace('Gif recorder / Starting encoding');
+        #end
         Runner.thread(saveThreadFunc.bind(path));
     }
     
     function onEncodingFinished():Void {
-        trace(savingTime);
+        #if !no_gif_logging
+            trace('Gif recorder / Encoding finished. Time taken was $savingTime seconds');
+        #end
     }
     
     var savingTime:Float = 0;
     function saveThreadFunc(path:String):Void {
         var t = Luxe.time;
-        trace('Gif recorder / Started background thread for saving');
         var encoder = new GifEncoder(repeat, quality, true);
         encoder.SetDelay(Math.round(1000 * minTimePerFrame));
         encoder.Start_File(path);
@@ -104,7 +115,6 @@ class Recorder {
             Height:frameHeight,
             Data:savedFrames[0]
         }
-        trace('Gif recorder / Starting gif encoding');
         
         encoder.AddFrame(gifFrame);
         lastSavedFrame = 0;
@@ -120,7 +130,6 @@ class Recorder {
         state = Paused;
         lastSavedFrame = -1;
         reset();
-        trace('Gif recorder / Encoding finished');
         savingTime = Luxe.time - t;
         Runner.call_primary(onEncodingFinished);
     }
@@ -143,7 +152,9 @@ class Recorder {
             frameCount++;
             if (frameCount == maxFrames) {
                 state = Paused;
-                trace('Gif recorder / Max frames reached!');
+                #if !no_gif_logging
+                    trace('Gif recorder / Max frames reached!');
+                #end
             }
             Luxe.renderer.batcher.view.viewport.set(null, null, oldViewportSize.x, oldViewportSize.y);
             
