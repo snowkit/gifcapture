@@ -3,7 +3,7 @@ import snow.api.buffers.Int32Array;
 import snow.api.buffers.Uint8Array;
 
 class LzwEncoder {
-    private static var EOF:Int = -1; //was readonly
+    static var EOF(default, never):Int = -1;
 
     var pixAry:Uint8Array;
     var initCodeSize:Int;
@@ -16,9 +16,9 @@ class LzwEncoder {
 
     // General DEFINEs
 
-    static var BITS:Int = 12; //was readonly
+    static var BITS(default, never):Int = 12;
 
-    static var HSIZE:Int = 5003; // 80% occupancy //was readonly
+    static var HSIZE(default, never):Int = 5003; // 80% occupancy
 
     // GIF Image compression - modified 'compress'
     //
