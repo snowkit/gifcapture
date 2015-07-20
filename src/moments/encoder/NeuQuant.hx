@@ -56,25 +56,27 @@ class NeuQuant {
     var freq:Int32Array;
     var radpower:Int32Array; // Radpower for precomputation
 
-    // Initialize network in range (0,0,0) to (255,255,255) and set parameters
-    public function new(thepic:Uint8Array, len:Int, sample:Int)
+    public function new()
     {
         netindex = new Int32Array(256);
         bias = new Int32Array(netsize);
         freq = new Int32Array(netsize);
         radpower = new Int32Array(initrad);
-        var p:Int32Array;
-
+        network = new Int32Array(netsize * 4);
+    }
+    
+    // Reset network in range (0,0,0) to (255,255,255) and set parameters
+    public function reset(thepic:Uint8Array, len:Int, sample:Int):Void {
         thepicture = thepic;
         lengthcount = len;
         samplefac = sample;
-
-        network = new Int32Array(netsize * 4);
+        
+        var p:Int32Array;
         for (i in 0...netsize) {
             p = network.subarray(i * 4, i * 4 + 4);
             p[0] = p[1] = p[2] = Std.int((i << (netbiasshift + 8)) / netsize);
             freq[i] = Std.int(intbias / netsize); // 1 / netsize
-            bias[i] = 0;
+            bias[i] = 0; // allocated to zero?
         }
     }
 

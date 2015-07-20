@@ -109,14 +109,25 @@ class LzwEncoder {
     var accum:Uint8Array;
 
     //----------------------------------------------------------------------------
-    public function new(width:Int, height:Int, pixels:Uint8Array, color_depth:Int) 
+    public function new() 
     {
-        pixAry = pixels;
-        initCodeSize = Std.int(Math.max(2, color_depth));
-        
         htab = new Int32Array(HSIZE);
         codetab = new Int32Array(HSIZE);
         accum = new Uint8Array(256);
+    }
+    
+    //Reset the encoder to new pixel data and default values
+    public function reset(pixels:Uint8Array, color_depth:Int) { //width and height used to be passed in though they were never used
+        pixAry = pixels;
+        initCodeSize = Std.int(Math.max(2, color_depth));
+        
+        maxbits = BITS;
+        maxmaxcode = 1 << BITS;
+        hsize = HSIZE;
+        free_ent = 0;
+        clear_flg = false;
+        cur_accum = 0;
+        cur_bits = 0;
     }
 
     // Add a character to the end of the current packet, and if it is 254

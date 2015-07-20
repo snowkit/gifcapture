@@ -26,6 +26,9 @@ class GifEncoder {
     var IsSizeSet:Bool = false;           // If false, get size from first frame
     var SampleInterval:Int = 10;          // Default sample interval for quantizer
 
+    var nq:NeuQuant;
+    var lzwEncoder:LzwEncoder;
+    
     /// <summary>
     /// Constructor with the number of times the set of GIF frames should be played.
     /// </summary>
@@ -41,6 +44,9 @@ class GifEncoder {
         SampleInterval = Std.int(Maths.clamp(quality, 1, 100));
         UsedEntry = [for (i in 0...256) false];
         FlippedY = flippedY;
+        
+        nq = new NeuQuant();
+        lzwEncoder = new LzwEncoder();
     }
 
     /// <summary>
@@ -179,12 +185,13 @@ class GifEncoder {
     {
         Width = w;
         Height = h;
+        //Now that the size is set, we can allocate frame data arrays;
+        Pixels = new Uint8Array(w * h * 3);
+        IndexedPixels = new Uint8Array(w * h);
         IsSizeSet = true;
     }
     
     function GetImagePixels():Void {
-        if (Pixels == null) Pixels = new Uint8Array(CurrentFrame.Width * CurrentFrame.Height * 3);
-        
         if (!FlippedY) {
             for (i in 0...(CurrentFrame.Width * CurrentFrame.Height)) {
                 Pixels.set(CurrentFrame.Data.subarray(i * 4, i * 4 + 3), i * 3);
@@ -204,21 +211,17 @@ class GifEncoder {
     // Analyzes image colors and creates color map.
     function AnalyzePixels():Void
     {
-        var len = Pixels.length;
-        var nPix = Std.int(len / 3);
-        IndexedPixels = new Uint8Array(nPix);
-        var nq = new NeuQuant(Pixels, len, SampleInterval);
+        nq.reset(Pixels, Pixels.length, SampleInterval);
         ColorTab = nq.Process(); // Create reduced palette
 
         // Map image pixels to new palette
         var k:Int = 0;
-        for (i in 0...nPix)
+        for (i in 0...(CurrentFrame.Width * CurrentFrame.Height))
         {
             var index = nq.Map(Pixels[k++] & 0xff, Pixels[k++] & 0xff, Pixels[k++] & 0xff);
             UsedEntry[index] = true;
-            IndexedPixels[i] = index; //(byte)index; :todo: does this have to be ported, if so, how?
+            IndexedPixels[i] = index;
         }
-        //Pixels = null; :todo: Null & recreate this every time or keep it around? how would that work with flipped/non-flipped?
         ColorDepth = 8;
         PaletteSize = 7;
     }
@@ -310,7 +313,7 @@ class GifEncoder {
     // Encodes and writes pixel data.
     function WritePixels():Void
     {
-        var encoder = new LzwEncoder(Width, Height, IndexedPixels, ColorDepth);
-        encoder.Encode(FileStream);
+        lzwEncoder.reset(IndexedPixels, ColorDepth);
+        lzwEncoder.Encode(FileStream);
     }
 }
