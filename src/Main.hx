@@ -45,7 +45,13 @@ class Main extends luxe.Game {
             case Key.key_r:
                 recorder.reset();
             case Key.key_1:
-                recorder.save('recording.gif');
+                var path = Luxe.snow.io.module.dialog_save('Save Gif');
+                if(path != ''){
+                    recorder.save(path);
+                }
+                else{
+                    trace('Gif recorder / No file path specified, gif will not be saved!')
+                }
         }
     }
     
