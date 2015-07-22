@@ -14,7 +14,7 @@ class Main extends luxe.Game {
     var boxGeom:QuadGeometry;
     var recorder:Recorder;
     
-	override function ready() {
+    override function ready() {
         boxGeom = Luxe.draw.box( {
            w:50,
            h:50,
@@ -25,13 +25,13 @@ class Main extends luxe.Game {
         recorder = new Recorder(Std.int(Luxe.screen.w / 2), Std.int(Luxe.screen.h / 2), 60, 10, 100, 0);
     }
     
-	override function onkeyup(e:KeyEvent) {
-		if (e.keycode == Key.escape) {
+    override function onkeyup(e:KeyEvent) {
+	    if (e.keycode == Key.escape) {
             recorder.destroy();
             recorder = null; // :todo: necessary?
-			Luxe.shutdown();
+            Luxe.shutdown();
         }
-	}
+    }
     
     override public function onkeydown(event:KeyEvent) {
         switch(event.keycode) {
@@ -62,7 +62,7 @@ class Main extends luxe.Game {
         recorder.onFrameRendered();
     }
 
-	override function update(dt:Float) {
+    override function update(dt:Float) {
         recorder.update();
         if (recorder.state == RecorderState.Saving) {
             Luxe.draw.box( {
@@ -87,5 +87,5 @@ class Main extends luxe.Game {
         else if (Luxe.input.keydown(Key.key_s)) {
            boxGeom.transform.pos.y += 200 * dt; 
         }
-	}
+    }
 }
