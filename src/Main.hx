@@ -9,6 +9,7 @@ import gif.GifEncoder;
 import snow.modules.opengl.GL;
 import sys.io.File;
 import Recorder;
+
 class Main extends luxe.Game {
     var boxGeom:QuadGeometry;
     var recorder:Recorder;

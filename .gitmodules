@@ -1,3 +1,0 @@
-[submodule "src/gif"]
-	path = src/gif
-	url = https://github.com/snowkit/gif.git
