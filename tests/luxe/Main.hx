@@ -1,14 +1,13 @@
-package;
 
 import phoenix.geometry.QuadGeometry;
 import phoenix.RenderTexture;
-import snow.api.buffers.Int32Array;
-import snow.api.buffers.Uint8Array;
+
 import luxe.Input;
 import gif.GifEncoder;
+import moments.Recorder;
+
 import snow.modules.opengl.GL;
-import sys.io.File;
-import Recorder;
+import snow.api.buffers.*;
 
 class Main extends luxe.Game {
     var boxGeom:QuadGeometry;

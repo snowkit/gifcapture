@@ -1,11 +1,11 @@
-package;
+package moments;
 
 import luxe.Vector;
 import gif.GifEncoder;
 import phoenix.RenderTexture;
 import haxe.io.UInt8Array;
 import snow.modules.opengl.GL;
-import Runner;
+import moments.Runner;
 
 #if cpp
     import cpp.vm.Thread;

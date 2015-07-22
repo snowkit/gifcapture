@@ -1,0 +1,12 @@
+{
+	"name": "moments",
+	"url": "https://github.com/snowkit/moments",
+	"license": "MIT",
+	"tags": [],
+	"description": "A gif recorder and encoder library",
+	"version": "1.0.0-alpha",
+	"releasenote": "initial commit",
+	"contributors": [ "underscorediscovery", "keymaster" ],
+    "classPath": "",
+	"dependencies": {}
+}

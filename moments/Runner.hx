@@ -1,3 +1,5 @@
+package moments;
+
 #if cpp
     import cpp.vm.Thread;
     import cpp.vm.Deque;
