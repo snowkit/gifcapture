@@ -27,6 +27,8 @@ class Main extends luxe.Game {
     
 	override function onkeyup(e:KeyEvent) {
 		if (e.keycode == Key.escape) {
+            recorder.destroy();
+            recorder = null; // :todo: necessary?
 			Luxe.shutdown();
         }
 	}
@@ -50,7 +52,7 @@ class Main extends luxe.Game {
                     recorder.save(path);
                 }
                 else{
-                    trace('Gif recorder / No file path specified, gif will not be saved!')
+                    trace('Gif recorder / No file path specified, gif will not be saved!');
                 }
         }
     }

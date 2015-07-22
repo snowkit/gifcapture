@@ -6,6 +6,12 @@ import snow.api.buffers.Uint8Array;
 import snow.modules.opengl.GL;
 import Runner;
 
+#if cpp
+    import cpp.vm.Thread;
+#elseif neko
+    import neko.vm.Thread;
+#end
+
 class Recorder {
     public var state(default, null):RecorderState = Paused;
     public var lastSavedFrame(default, null):Int = -1;
@@ -25,6 +31,8 @@ class Recorder {
     public var frameCount(default, null):Int = 0;
     
     var timeSinceLastSave:Float = 0;
+
+    var saveThread:Thread;
     
     public function new(_frameWidth:Int, _frameHeight:Int, _maxFps:Int, _maxTime:Float, _quality:Int = 10, _repeat:Int = -1) {
         frameWidth = _frameWidth;
@@ -50,6 +58,14 @@ class Recorder {
         Runner.run();
     }
     
+    public function destroy() {
+        if(state == Saving) abortSaving();
+        targetTex.destroy(); //:todo: is all of the nulling necessary?
+        savedFrames = null;
+        frameDelays = null;
+        saveThread = null;
+    }
+
     public function pause() {
         if (state == Saving) {
             #if !no_gif_logging
@@ -79,8 +95,16 @@ class Recorder {
             #end
             return;
         }
+        lastSavedFrame = -1;
         frameCount = 0;
         state = Paused;
+        saveThread = null;
+    }
+
+    public function abortSaving(){
+        if(state == Saving) saveThread.sendMessage(ThreadMessages.abort);
+        state = Paused;
+        reset();
     }
     
     public function save(path:String) {
@@ -95,7 +119,7 @@ class Recorder {
         #if !no_gif_logging
             trace('Gif recorder / Starting encoding');
         #end
-        Runner.thread(saveThreadFunc.bind(path));
+        saveThread = Runner.thread(saveThreadFunc.bind(path));
     }
     
     function onEncodingFinished():Void {
@@ -120,6 +144,12 @@ class Recorder {
         lastSavedFrame = 0;
         
         for (i in 1...frameCount) {
+            if(Thread.readMessage(false) == ThreadMessages.abort){
+                #if !no_gif_logging
+                    Runner.call_primary(runTrace.bind('Gif recorder / Gif saving was stopped.')); //:todo: this may not be displayed if no recorder.update is run afterwards.
+                #end
+                break;
+            }
             encoder.SetDelay(Math.round(1000 * frameDelays[i]));
             gifFrame.Data = savedFrames[i];
             encoder.AddFrame(gifFrame);
@@ -128,7 +158,6 @@ class Recorder {
         
         encoder.Finish();
         state = Paused;
-        lastSavedFrame = -1;
         reset();
         savingTime = Luxe.time - t;
         Runner.call_primary(onEncodingFinished);
@@ -137,30 +166,37 @@ class Recorder {
     public function onFrameRendered() {
         if (state != Recording) return;
         if (Luxe.time - timeSinceLastSave >= minTimePerFrame) {
-            var oldViewportSize = new Vector(Luxe.renderer.batcher.view.viewport.w, Luxe.renderer.batcher.view.viewport.h);
-            Luxe.renderer.batcher.view.viewport.set(null, null, frameWidth, frameHeight);
+            var oldViewport = Luxe.renderer.batcher.view.viewport.clone();
+            Luxe.renderer.batcher.view.viewport.set(0, 0, frameWidth, frameHeight);
             Luxe.renderer.target = targetTex;
             Luxe.renderer.clear(Luxe.renderer.clear_color);
             Luxe.renderer.batcher.draw();
+            Luxe.renderer.batcher.view.viewport.copy_from(oldViewport);
+
             if (savedFrames.length == frameCount) {
                 savedFrames.push(new Uint8Array(frameWidth * frameHeight * 4));
                 frameDelays.push(0);
             }
+
             GL.readPixels(0, 0, frameWidth, frameHeight, GL.RGBA, GL.UNSIGNED_BYTE, savedFrames[frameCount]);
             Luxe.renderer.target = null;
+
             frameDelays[frameCount] = Luxe.time - timeSinceLastSave;
             frameCount++;
+
             if (frameCount == maxFrames) {
                 state = Paused;
                 #if !no_gif_logging
                     trace('Gif recorder / Max frames reached!');
                 #end
             }
-            Luxe.renderer.batcher.view.viewport.set(null, null, oldViewportSize.x, oldViewportSize.y);
             
             timeSinceLastSave = Luxe.time;
         }
-        
+    }
+
+    public function runTrace(message:Dynamic):Void{
+        trace(message);
     }
 }
 
@@ -168,4 +204,9 @@ enum RecorderState {
     Recording;
     Paused;
     Saving;
+}
+
+@:enum
+abstract ThreadMessages(Int){
+    var abort = 1;
 }
