@@ -1,6 +1,9 @@
-/* 
+package moments.encoder;
+
+/*
  * Copyright (c) 1994 Anthony Dekker
  * Ported to Java by Kevin Weiner, FM Software
+ * Ported to Haxe by Tilman Schmidt
  *
  * NEUQUANT Neural-Net quantization algorithm by Anthony Dekker, 1994.
  * See "Kohonen neural networks for optimal colour quantization"
@@ -15,11 +18,9 @@
  * and/or sell copies of the Software, and to permit persons who receive
  * copies from any such party to do so, with the only requirement being
  * that this copyright notice remain intact.
- * 
- * Haxe port by Tilman Schmidt.
+ *
  */
 
-package moments.encoder;
 import snow.api.buffers.Int32Array;
 import snow.api.buffers.Uint8Array;
 
@@ -85,13 +86,13 @@ class NeuQuant {
         radpower = new Int32Array(initrad);
         network = new Int32Array(netsize * 4);
     }
-    
+
     // Reset network in range (0,0,0) to (255,255,255) and set parameters
     public function reset(thepic:Uint8Array, len:Int, sample:Int):Void {
         thepicture = thepic;
         lengthcount = len;
         samplefac = sample;
-        
+
         var p:Int32Array;
         for (i in 0...netsize) {
             p = network.subarray(i * 4, i * 4 + 4);
@@ -205,7 +206,7 @@ class NeuQuant {
         var step:Int;
         var delta:Int;
         var samplepixels:Int;
-        
+
         var p:Uint8Array;
         var pix:Int;
         var lim:Int;
@@ -424,7 +425,7 @@ class NeuQuant {
         var hi:Int;
         var a:Int;
         var m:Int;
-        
+
         var p:Int32Array;
 
         lo = i - rad;
@@ -543,4 +544,5 @@ class NeuQuant {
         bias[bestpos] -= betagamma;
         return bestbiaspos;
     }
+
 }

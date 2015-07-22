@@ -1,4 +1,5 @@
-package ;
+package;
+
 import luxe.Vector;
 import moments.encoder.GifEncoder;
 import phoenix.RenderTexture;
@@ -30,12 +31,12 @@ class Recorder {
     var frameWidth:Int;
         /** Height of the gif */
     var frameHeight:Int;
-    
+
         /** The recorded frames which are then encoded into the gif. */
     var savedFrames:Array<Uint8Array>;
         /** For each frame i in the savedFrames array, this records the actual difference in time between recording the frame and the frame before it, in seconds. */
     var frameDelays:Array<Float>;
-    
+
         /** The actual gif encoder used in the background thread to save the gif. */
     var encoder:GifEncoder;
         /** The quality of the gif encoding. From 1 to 100, 1 being best quality but slowest processing, 100 being worst but fastest. */
@@ -51,13 +52,13 @@ class Recorder {
     var saveThread:Thread;
         /** The time it took for the last gif to save. Should only be written to by the encoding thread. */
     var savingTime:Float = 0;
-    
-        /** Construct a new recorder object. 
-            _frameWidth and _frameHeigt: The dimensions of the resulting gif. Can be different to the screen size. 
-            _maxFPS: The maximum framerate of the gif, and the rate at which the recorder tries to record new frames for the gif. 
-            _maxTime: The maximum recording time for one gif, inteded to limit memory consumption. 
-            _quality: The encoding quality of the gif, from 1 to 100. 1 results in best quality, but slower processing. 100 gives worst quality but fastest processing. 
-            _repeat: The number of times the gif should repeat. -1 means never (play once), 0 means infinitely. 
+
+        /** Construct a new recorder object.
+            _frameWidth and _frameHeigt: The dimensions of the resulting gif. Can be different to the screen size.
+            _maxFPS: The maximum framerate of the gif, and the rate at which the recorder tries to record new frames for the gif.
+            _maxTime: The maximum recording time for one gif, inteded to limit memory consumption.
+            _quality: The encoding quality of the gif, from 1 to 100. 1 results in best quality, but slower processing. 100 gives worst quality but fastest processing.
+            _repeat: The number of times the gif should repeat. -1 means never (play once), 0 means infinitely.
         */
     public function new(_frameWidth:Int, _frameHeight:Int, _maxFps:Int, _maxTime:Float, _quality:Int = 10, _repeat:Int = -1) {
         frameWidth = _frameWidth;
@@ -66,23 +67,23 @@ class Recorder {
         maxFrames = Math.round(_maxTime * _maxFps);
         quality = _quality;
         repeat = _repeat;
-        
+
         targetTex = new RenderTexture( {
            id:'GifTargetTexture',
            width:frameWidth,
            height:frameHeight
         });
-        
+
         savedFrames = [];
         frameDelays = [];
         Runner.init();
     }
-    
+
         /** Call this in your update loop to ensure the onEncodingFinished callback is being executed */
     public function update() {
         Runner.run();
     }
-    
+
     public function destroy() {
         if(state == Saving) abortSaving();
         targetTex.destroy(); //:todo: is all of the nulling necessary?
@@ -94,14 +95,14 @@ class Recorder {
     public function pause() {
         if (state == Saving) {
             #if !no_gif_logging
-                trace("Gif recorder / Recorder can't be paused while saving data. The recorder is paused automatically during saving"); 
+                trace("Gif recorder / Recorder can't be paused while saving data. The recorder is paused automatically during saving");
             #end
             return;
         }
-        
+
         state = Paused;
     }
-    
+
     public function record() {
         if (state == Saving) {
             #if !no_gif_logging
@@ -109,10 +110,10 @@ class Recorder {
             #end
             return;
         }
-        
+
         state = Recording;
     }
-    
+
     public function reset() {
         if (state == Saving) {
             #if !no_gif_logging
@@ -134,7 +135,7 @@ class Recorder {
             #end
             return;
         }
-        
+
         state = Saving;
         #if !no_gif_logging
             trace('Gif recorder / Starting encoding');
@@ -148,7 +149,7 @@ class Recorder {
         state = Paused;
         reset();
     }
-    
+
         /** The frame recording function. Call this after each render loop of the game. */
     public function onFrameRendered() {
         if (state != Recording) return;
@@ -177,26 +178,26 @@ class Recorder {
                     trace('Gif recorder / Max frames reached!');
                 #end
             }
-            
+
             timeSinceLastSave = Luxe.time;
         }
     }
-    
+
     function saveThreadFunc(path:String):Void {
         var t = Luxe.time;
         var encoder = new GifEncoder(repeat, quality, true);
         encoder.setDelay(Math.round(1000 * minTimePerFrame));
-        encoder.start_File(path);
+        encoder.startFile(path);
         var gifFrame = {
             width:frameWidth,
             height:frameHeight,
             data:new Uint8Array(frameWidth * frameHeight * 3)
         }
-        
+
         RGBAtoRGB(savedFrames[0], gifFrame.data);
         encoder.addFrame(gifFrame);
         lastSavedFrame = 0;
-        
+
         for (i in 1...frameCount) {
             if(Thread.readMessage(false) == ThreadMessages.abort){
                 #if !no_gif_logging
@@ -210,7 +211,7 @@ class Recorder {
             encoder.addFrame(gifFrame);
             lastSavedFrame = i;
         }
-        
+
         encoder.finish();
         state = Paused;
         reset();
@@ -218,7 +219,7 @@ class Recorder {
         Runner.call_primary(onEncodingFinished);
     }
 
-        /** Copies RGBA pixel data from source to target as RGB pixels. 
+        /** Copies RGBA pixel data from source to target as RGB pixels.
             Source should be of length width * height * 4, and target of size width * height * 3
         */
     function RGBAtoRGB(source:Uint8Array, target:Uint8Array):Void{
@@ -226,7 +227,7 @@ class Recorder {
            target.set(source.subarray(i * 4, i * 4 + 3), i * 3);
         }
     }
-    
+
         /** Called at the end of the encoding thread */
     function onEncodingFinished():Void {
         #if !no_gif_logging

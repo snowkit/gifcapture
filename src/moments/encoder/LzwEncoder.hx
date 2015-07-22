@@ -1,21 +1,22 @@
+ package moments.encoder;
+
 /*
  * No copyright asserted on the source code of this class. May be used
  * for any purpose, however, refer to the Unisys LZW patent for restrictions
  * on use of the associated LZWEncoder class :
- * 
+ *
  * The Unisys patent expired on 20 June 2003 in the USA, in Europe it expired
  * on 18 June 2004, in Japan the patent expired on 20 June 2004 and in Canada
  * it expired on 7 July 2004. The U.S. IBM patent expired 11 August 2006, The
  * Software Freedom Law Center says that after 1 October 2006, there will be
  * no significant patent claims interfering with employment of the GIF format.
- * 
+ *
  * Original code by Kevin Weiner, FM Software.
  * Adapted from Jef Poskanzer's Java port by way of J. M. G. Elliott.
- * 
- * Haxe port by Tilman Schmidt.
+ * Ported to Haxe by Tilman Schmidt
+ *
  */
- 
- package moments.encoder;
+
 import snow.api.buffers.Int32Array;
 import snow.api.buffers.Uint8Array;
 
@@ -126,18 +127,18 @@ class LzwEncoder {
     var accum:Uint8Array;
 
     //----------------------------------------------------------------------------
-    public function new() 
+    public function new()
     {
         htab = new Int32Array(HSIZE);
         codetab = new Int32Array(HSIZE);
         accum = new Uint8Array(256);
     }
-    
+
     //Reset the encoder to new pixel data and default values
     public function reset(pixels:Uint8Array, color_depth:Int) { //width and height used to be passed in though they were never used
         pixAry = pixels;
         initCodeSize = Std.int(Math.max(2, color_depth));
-        
+
         maxbits = BITS;
         maxmaxcode = 1 << BITS;
         hsize = HSIZE;
@@ -207,7 +208,7 @@ class LzwEncoder {
             ++hshift;
             fcode *= 2;
         }
-        
+
         hshift = 8 - hshift; // set hash code range bound
 
         hsize_reg = hsize;
@@ -215,27 +216,27 @@ class LzwEncoder {
 
         output(ClearCode, out);
 
-        while ((c = nextPixel()) != EOF) 
+        while ((c = nextPixel()) != EOF)
         {
             fcode = (c << maxbits) + ent;
             i = (c << hshift) ^ ent; // xor hashing
 
-            if (htab[i] == fcode) 
+            if (htab[i] == fcode)
             {
                 ent = codetab[i];
                 continue;
-            } 
+            }
             else if (htab[i] >= 0) // non-empty slot
             {
                 disp = hsize_reg - i; // secondary hash (after G. Knott)
                 if (i == 0)
                     disp = 1;
-                do 
+                do
                 {
                     if ((i -= disp) < 0)
                         i += hsize_reg;
 
-                    if (htab[i] == fcode) 
+                    if (htab[i] == fcode)
                     {
                         ent = codetab[i];
                         break;
@@ -245,11 +246,11 @@ class LzwEncoder {
             }
             output(ent, out);
             ent = c;
-            if (free_ent < maxmaxcode) 
+            if (free_ent < maxmaxcode)
             {
                 codetab[i] = free_ent++; // code -> hashtable
                 htab[i] = fcode;
-            } 
+            }
             else
                 clearTable(out);
         }
@@ -259,7 +260,7 @@ class LzwEncoder {
     }
 
     //----------------------------------------------------------------------------
-    public function encode( os:haxe.io.Output):Void
+    public function encode(os:haxe.io.Output):Void
     {
         os.writeByte( initCodeSize ); // write "initial code size" byte
         curPixel = 0;
@@ -270,7 +271,7 @@ class LzwEncoder {
     // flush the packet to disk, and reset the accumulator
     function flush(out:haxe.io.Output):Void
     {
-        if (a_count > 0) 
+        if (a_count > 0)
         {
             out.writeByte(a_count);
             out.writeBytes(accum.toBytes(), 0, a_count);
@@ -290,7 +291,7 @@ class LzwEncoder {
     {
         if (curPixel == pixAry.length)
             return EOF;
-        
+
         curPixel++;
         return pixAry[curPixel - 1] & 0xff;
     }
@@ -306,7 +307,7 @@ class LzwEncoder {
 
         cur_bits += n_bits;
 
-        while (cur_bits >= 8) 
+        while (cur_bits >= 8)
         {
             add(cur_accum & 0xff, out);
             cur_accum >>= 8;
@@ -315,14 +316,14 @@ class LzwEncoder {
 
         // If the next entry is going to be too big for the code size,
         // then increase it, if possible.
-        if (free_ent > maxcode || clear_flg) 
+        if (free_ent > maxcode || clear_flg)
         {
-            if (clear_flg) 
+            if (clear_flg)
             {
                 maxcode = maxCode(n_bits = g_init_bits);
                 clear_flg = false;
-            } 
-            else 
+            }
+            else
             {
                 ++n_bits;
                 if (n_bits == maxbits)
@@ -332,10 +333,10 @@ class LzwEncoder {
             }
         }
 
-        if (code == EOFCode) 
+        if (code == EOFCode)
         {
             // At EOF, write the rest of the buffer.
-            while (cur_bits > 0) 
+            while (cur_bits > 0)
             {
                 add(cur_accum & 0xff, out);
                 cur_accum >>= 8;
@@ -345,4 +346,5 @@ class LzwEncoder {
             flush(out);
         }
     }
+
 }
