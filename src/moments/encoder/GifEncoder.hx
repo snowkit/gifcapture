@@ -193,17 +193,12 @@ class GifEncoder {
     
     function GetImagePixels():Void {
         if (!FlippedY) {
-            for (i in 0...(CurrentFrame.Width * CurrentFrame.Height)) {
-                Pixels.set(CurrentFrame.Data.subarray(i * 4, i * 4 + 3), i * 3);
-            }
+            Pixels = CurrentFrame.Data;
         }
         else {
-            var lineOffset:Int;
-            for (y in 0...CurrentFrame.Height) {
-                for (x in 0...CurrentFrame.Width) {
-                    lineOffset = (CurrentFrame.Height - 1 - y) * CurrentFrame.Width * 4;
-                    Pixels.set(CurrentFrame.Data.subarray(lineOffset + x * 4, lineOffset + x * 4 + 3), y * CurrentFrame.Width * 3 + x * 3);
-                }
+            var stride = CurrentFrame.Width * 3;
+            for(y in 0...CurrentFrame.Height){
+                Pixels.set(CurrentFrame.Data.subarray((CurrentFrame.Height - 1 - y) * stride, (CurrentFrame.Height - y) * stride), y * stride);
             }
         }
     }

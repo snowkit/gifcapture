@@ -137,9 +137,10 @@ class Recorder {
         var gifFrame = {
             Width:frameWidth,
             Height:frameHeight,
-            Data:savedFrames[0]
+            Data:new Uint8Array(frameWidth * frameHeight * 3)
         }
         
+        RGBAtoRGB(savedFrames[0], gifFrame.Data);
         encoder.AddFrame(gifFrame);
         lastSavedFrame = 0;
         
@@ -150,8 +151,9 @@ class Recorder {
                 #end
                 break;
             }
+
             encoder.SetDelay(Math.round(1000 * frameDelays[i]));
-            gifFrame.Data = savedFrames[i];
+            RGBAtoRGB(savedFrames[i], gifFrame.Data);
             encoder.AddFrame(gifFrame);
             lastSavedFrame = i;
         }
@@ -161,6 +163,13 @@ class Recorder {
         reset();
         savingTime = Luxe.time - t;
         Runner.call_primary(onEncodingFinished);
+    }
+    //Copies RGBA pixel data from source to target as RGB pixels
+    //source should be of length width * height * 4, and target of size width * height * 3
+    function RGBAtoRGB(source:Uint8Array, target:Uint8Array):Void{
+        for(i in 0...(frameWidth * frameHeight)){
+           target.set(source.subarray(i * 4, i * 4 + 3), i * 3);
+        }
     }
     
     public function onFrameRendered() {
