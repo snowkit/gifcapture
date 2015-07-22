@@ -54,7 +54,7 @@ class GifEncoder {
     /// to last frame added).
     /// </summary>
     /// <param name="ms">Delay time in microseconds</param>
-    public function SetDelay(ms:Int):Void
+    public function setDelay(ms:Int):Void
     {
         frameDelay = Math.round(ms / 10);
     }
