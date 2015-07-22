@@ -17,13 +17,13 @@
  *
  */
 
-import snow.api.buffers.Int32Array;
-import snow.api.buffers.Uint8Array;
+import haxe.io.Int32Array;
+import haxe.io.UInt8Array;
 
 class LzwEncoder {
     static var EOF(default, never):Int = -1;
 
-    var pixAry:Uint8Array;
+    var pixAry:UInt8Array;
     var initCodeSize:Int;
     var curPixel:Int;
 
@@ -124,18 +124,18 @@ class LzwEncoder {
     var a_count:Int;
 
     // Define the storage for the packet accumulator
-    var accum:Uint8Array;
+    var accum:UInt8Array;
 
     //----------------------------------------------------------------------------
     public function new()
     {
         htab = new Int32Array(HSIZE);
         codetab = new Int32Array(HSIZE);
-        accum = new Uint8Array(256);
+        accum = new UInt8Array(256);
     }
 
     //Reset the encoder to new pixel data and default values
-    public function reset(pixels:Uint8Array, color_depth:Int) { //width and height used to be passed in though they were never used
+    public function reset(pixels:UInt8Array, color_depth:Int) { //width and height used to be passed in though they were never used
         pixAry = pixels;
         initCodeSize = Std.int(Math.max(2, color_depth));
 
@@ -274,7 +274,7 @@ class LzwEncoder {
         if (a_count > 0)
         {
             out.writeByte(a_count);
-            out.writeBytes(accum.toBytes(), 0, a_count);
+            out.writeBytes(accum.view.buffer, 0, a_count);
             a_count = 0;
         }
     }

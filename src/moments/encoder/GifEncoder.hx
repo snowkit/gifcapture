@@ -11,7 +11,7 @@ package moments.encoder;
 
 import sys.io.File;
 import sys.io.FileOutput;
-import snow.api.buffers.Uint8Array;
+import haxe.io.UInt8Array;
 
 class GifEncoder {
 
@@ -23,11 +23,11 @@ class GifEncoder {
     var fileStream:FileOutput;
 
     var currentFrame:GifFrame;
-    var pixels:Uint8Array;
+    var pixels:UInt8Array;
     var flippedY:Bool = false;
-    var indexedPixels:Uint8Array;           // Converted frame indexed to palette
+    var indexedPixels:UInt8Array;           // Converted frame indexed to palette
     var colorDepth:Int;                     // Number of bit planes
-    var colorTab:Uint8Array;                // RGB palette
+    var colorTab:UInt8Array;                // RGB palette
     var usedEntry:Array<Bool>;              // Active palette entries
     var paletteSize:Int = 7;                // Color table size (bits-1)
     var disposalCode:Int = -1;              // Disposal code (-1 = use default)
@@ -212,8 +212,8 @@ class GifEncoder {
         width = w;
         height = h;
         //Now that the size is set, we can allocate frame data arrays;
-        pixels = new Uint8Array(w * h * 3);
-        indexedPixels = new Uint8Array(w * h);
+        pixels = new UInt8Array(w * h * 3);
+        indexedPixels = new UInt8Array(w * h);
         isSizeSet = true;
     }
 
@@ -224,8 +224,9 @@ class GifEncoder {
         }
         else {
             var stride = currentFrame.width * 3;
-            for(y in 0...currentFrame.height){
-                pixels.set(currentFrame.data.subarray((currentFrame.height - 1 - y) * stride, (currentFrame.height - y) * stride), y * stride);
+            for(y in 0...currentFrame.height) {
+                var begin = (currentFrame.height - 1 - y) * stride;
+                pixels.view.buffer.blit(y * stride, currentFrame.data.view.buffer, begin, stride);
             }
         }
     }
@@ -326,7 +327,7 @@ class GifEncoder {
     /** Write color table. */
     function writePalette():Void
     {
-        fileStream.write(colorTab.toBytes());
+        fileStream.write(colorTab.view.buffer);
         var n:Int = (3 * 256) - colorTab.length;
 
         for (i in 0...n)
@@ -356,6 +357,6 @@ typedef GifFrame = {
         /** Height of the frame */
     var height:Int;
         /** Pixels data in unsigned bytes, rgb format */
-    var data:Uint8Array;
+    var data:UInt8Array;
 
 }

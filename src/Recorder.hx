@@ -3,7 +3,7 @@ package;
 import luxe.Vector;
 import moments.encoder.GifEncoder;
 import phoenix.RenderTexture;
-import snow.api.buffers.Uint8Array;
+import haxe.io.UInt8Array;
 import snow.modules.opengl.GL;
 import Runner;
 
@@ -33,7 +33,7 @@ class Recorder {
     var frameHeight:Int;
 
         /** The recorded frames which are then encoded into the gif. */
-    var savedFrames:Array<Uint8Array>;
+    var savedFrames:Array<snow.api.buffers.Uint8Array>;
         /** For each frame i in the savedFrames array, this records the actual difference in time between recording the frame and the frame before it, in seconds. */
     var frameDelays:Array<Float>;
 
@@ -162,7 +162,7 @@ class Recorder {
             Luxe.renderer.batcher.view.viewport.copy_from(oldViewport);
 
             if (savedFrames.length == frameCount) {
-                savedFrames.push(new Uint8Array(frameWidth * frameHeight * 4));
+                savedFrames.push(new snow.api.buffers.Uint8Array(frameWidth * frameHeight * 4));
                 frameDelays.push(0);
             }
 
@@ -191,10 +191,10 @@ class Recorder {
         var gifFrame = {
             width:frameWidth,
             height:frameHeight,
-            data:new Uint8Array(frameWidth * frameHeight * 3)
+            data: new UInt8Array(frameWidth * frameHeight * 3)
         }
 
-        RGBAtoRGB(savedFrames[0], gifFrame.data);
+        RGBAtoRGB(UInt8Array.fromBytes(savedFrames[0].toBytes()), gifFrame.data);
         encoder.addFrame(gifFrame);
         lastSavedFrame = 0;
 
@@ -207,7 +207,7 @@ class Recorder {
             }
 
             encoder.setDelay(Math.round(1000 * frameDelays[i]));
-            RGBAtoRGB(savedFrames[i], gifFrame.data);
+            RGBAtoRGB(UInt8Array.fromBytes(savedFrames[i].toBytes()), gifFrame.data);
             encoder.addFrame(gifFrame);
             lastSavedFrame = i;
         }
@@ -222,9 +222,9 @@ class Recorder {
         /** Copies RGBA pixel data from source to target as RGB pixels.
             Source should be of length width * height * 4, and target of size width * height * 3
         */
-    function RGBAtoRGB(source:Uint8Array, target:Uint8Array):Void{
-        for(i in 0...(frameWidth * frameHeight)){
-           target.set(source.subarray(i * 4, i * 4 + 3), i * 3);
+    function RGBAtoRGB(source:UInt8Array, target:UInt8Array):Void{
+        for(i in 0...(frameWidth * frameHeight)) {
+            target.view.buffer.blit(i * 3, source.view.buffer, i*4, 3);
         }
     }
 

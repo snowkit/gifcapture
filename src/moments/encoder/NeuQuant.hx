@@ -21,8 +21,8 @@ package moments.encoder;
  *
  */
 
-import snow.api.buffers.Int32Array;
-import snow.api.buffers.Uint8Array;
+import haxe.io.Int32Array;
+import haxe.io.UInt8Array;
 
 class NeuQuant {
 	static var netsize(default, never):Int = 256; // Number of colours used
@@ -69,7 +69,7 @@ class NeuQuant {
     static var alpharadbias(default, never):Int = (1 << alpharadbshift);
 
     // Types and Global Variables
-    var thepicture:Uint8Array; // The input image itself
+    var thepicture:UInt8Array; // The input image itself
     var lengthcount:Int; // Lengthcount = H*W*3
     var samplefac:Int; // Sampling factor 1..30
     var network:Int32Array; // The network itself - [netsize][4]
@@ -88,7 +88,7 @@ class NeuQuant {
     }
 
     // Reset network in range (0,0,0) to (255,255,255) and set parameters
-    public function reset(thepic:Uint8Array, len:Int, sample:Int):Void {
+    public function reset(thepic:UInt8Array, len:Int, sample:Int):Void {
         thepicture = thepic;
         lengthcount = len;
         samplefac = sample;
@@ -102,9 +102,9 @@ class NeuQuant {
         }
     }
 
-    public function colormap():Uint8Array
+    public function colormap():UInt8Array
     {
-        var map = new Uint8Array(3 * netsize);
+        var map = new UInt8Array(3 * netsize);
         var index = new Int32Array(netsize);
 
         for (i in 0...netsize)
@@ -207,7 +207,7 @@ class NeuQuant {
         var delta:Int;
         var samplepixels:Int;
 
-        var p:Uint8Array;
+        var p:UInt8Array;
         var pix:Int;
         var lim:Int;
 
@@ -396,7 +396,7 @@ class NeuQuant {
         return best;
     }
 
-    public function process():Uint8Array
+    public function process():UInt8Array
     {
         learn();
         unbiasnet();

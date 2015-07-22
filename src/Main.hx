@@ -21,7 +21,7 @@ class Main extends luxe.Game {
            y:100
         });
 
-        recorder = new Recorder(Std.int(Luxe.screen.w / 2), Std.int(Luxe.screen.h / 2), 60, 10, 100, 0);
+        recorder = new Recorder(Std.int(Luxe.screen.w / 4), Std.int(Luxe.screen.h / 4), 30, 10, 100, 0);
     }
 
     override function onkeyup(e:KeyEvent) {
