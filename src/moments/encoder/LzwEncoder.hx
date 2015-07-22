@@ -66,12 +66,12 @@ class LzwEncoder {
 
     // output
     //
-    // Output the given code.
+    // output the given code.
     // Inputs:
     //      code:   A n_bits-bit integer.  If == -1, then EOF.  This assumes
     //              that n_bits =< wordsize - 1.
-    // Outputs:
-    //      Outputs code to the file.
+    // outputs:
+    //      outputs code to the file.
     // Assumptions:
     //      Chars are 8 bits long.
     // Algorithm:
@@ -130,35 +130,35 @@ class LzwEncoder {
         cur_bits = 0;
     }
 
-    // Add a character to the end of the current packet, and if it is 254
+    // add a character to the end of the current packet, and if it is 254
     // characters, flush the packet to disk.
-    function Add(c:UInt, outs:haxe.io.Output):Void
+    function add(c:UInt, out:haxe.io.Output):Void
     {
         accum[a_count++] = c;
         if (a_count >= 254)
-            Flush(outs);
+            flush(out);
     }
 
     // Clear out the hash table
 
     // table clear for block compress
-    function ClearTable(outs:haxe.io.Output):Void
+    function clearTable(out:haxe.io.Output):Void
     {
-        ResetCodeTable(hsize);
+        resetCodeTable(hsize);
         free_ent = ClearCode + 2;
         clear_flg = true;
 
-        Output(ClearCode, outs);
+        output(ClearCode, out);
     }
 
     // reset code table
-    function ResetCodeTable(hsize:Int):Void
+    function resetCodeTable(hsize:Int):Void
     {
         for (i in 0...hsize)
             htab[i] = -1;
     }
 
-    function Compress(init_bits:Int, outs:haxe.io.Output):Void
+    function compress(init_bits:Int, out:haxe.io.Output):Void
     {
         var fcode:Int;
         var i:Int /* = 0 */;
@@ -174,7 +174,7 @@ class LzwEncoder {
         // Set up the necessary values
         clear_flg = false;
         n_bits = g_init_bits;
-        maxcode = MaxCode(n_bits);
+        maxcode = maxCode(n_bits);
 
         ClearCode = 1 << (init_bits - 1);
         EOFCode = ClearCode + 1;
@@ -182,7 +182,7 @@ class LzwEncoder {
 
         a_count = 0; // clear packet
 
-        ent = NextPixel();
+        ent = nextPixel();
 
         hshift = 0;
         fcode = hsize;
@@ -194,11 +194,11 @@ class LzwEncoder {
         hshift = 8 - hshift; // set hash code range bound
 
         hsize_reg = hsize;
-        ResetCodeTable(hsize_reg); // clear hash table
+        resetCodeTable(hsize_reg); // clear hash table
 
-        Output(ClearCode, outs);
+        output(ClearCode, out);
 
-        while ((c = NextPixel()) != EOF) 
+        while ((c = nextPixel()) != EOF) 
         {
             fcode = (c << maxbits) + ent;
             i = (c << hshift) ^ ent; // xor hashing
@@ -226,7 +226,7 @@ class LzwEncoder {
                 } while (htab[i] >= 0);
                 if (htab[i] == fcode) continue;
             }
-            Output(ent, outs);
+            output(ent, out);
             ent = c;
             if (free_ent < maxmaxcode) 
             {
@@ -234,34 +234,34 @@ class LzwEncoder {
                 htab[i] = fcode;
             } 
             else
-                ClearTable(outs);
+                clearTable(out);
         }
         // Put out the final code.
-        Output(ent, outs);
-        Output(EOFCode, outs);
+        output(ent, out);
+        output(EOFCode, out);
     }
 
     //----------------------------------------------------------------------------
-    public function Encode( os:haxe.io.Output):Void
+    public function encode( os:haxe.io.Output):Void
     {
         os.writeByte( initCodeSize ); // write "initial code size" byte
         curPixel = 0;
-        Compress(initCodeSize + 1, os); // compress and write the pixel data
+        compress(initCodeSize + 1, os); // compress and write the pixel data
         os.writeByte(0); // write block terminator
     }
 
-    // Flush the packet to disk, and reset the accumulator
-    function Flush(outs:haxe.io.Output):Void
+    // flush the packet to disk, and reset the accumulator
+    function flush(out:haxe.io.Output):Void
     {
         if (a_count > 0) 
         {
-            outs.writeByte(a_count);
-            outs.writeBytes(accum.toBytes(), 0, a_count);
+            out.writeByte(a_count);
+            out.writeBytes(accum.toBytes(), 0, a_count);
             a_count = 0;
         }
     }
 
-    function MaxCode(n_bits:Int):Int
+    inline function maxCode(n_bits:Int):Int
     {
         return (1 << n_bits) - 1;
     }
@@ -269,7 +269,7 @@ class LzwEncoder {
     //----------------------------------------------------------------------------
     // Return the next pixel from the image
     //----------------------------------------------------------------------------
-    function NextPixel():Int
+    function nextPixel():Int
     {
         if (curPixel == pixAry.length)
             return EOF;
@@ -278,7 +278,7 @@ class LzwEncoder {
         return pixAry[curPixel - 1] & 0xff;
     }
 
-    function Output(code:Int, outs:haxe.io.Output):Void
+    function output(code:Int, out:haxe.io.Output):Void
     {
         cur_accum &= masks[cur_bits];
 
@@ -291,7 +291,7 @@ class LzwEncoder {
 
         while (cur_bits >= 8) 
         {
-            Add(cur_accum & 0xff, outs);
+            add(cur_accum & 0xff, out);
             cur_accum >>= 8;
             cur_bits -= 8;
         }
@@ -302,7 +302,7 @@ class LzwEncoder {
         {
             if (clear_flg) 
             {
-                maxcode = MaxCode(n_bits = g_init_bits);
+                maxcode = maxCode(n_bits = g_init_bits);
                 clear_flg = false;
             } 
             else 
@@ -311,7 +311,7 @@ class LzwEncoder {
                 if (n_bits == maxbits)
                     maxcode = maxmaxcode;
                 else
-                    maxcode = MaxCode(n_bits);
+                    maxcode = maxCode(n_bits);
             }
         }
 
@@ -320,12 +320,12 @@ class LzwEncoder {
             // At EOF, write the rest of the buffer.
             while (cur_bits > 0) 
             {
-                Add(cur_accum & 0xff, outs);
+                add(cur_accum & 0xff, out);
                 cur_accum >>= 8;
                 cur_bits -= 8;
             }
 
-            Flush(outs);
+            flush(out);
         }
     }
 }

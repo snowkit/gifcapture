@@ -5,26 +5,26 @@ import sys.io.File;
 import sys.io.FileOutput;
 
 class GifEncoder {
-    var Width:Int;
-    var Height:Int;
-    var Repeat:Int = -1;                  // -1: no repeat, 0: infinite, >0: repeat count
-    var FrameDelay:Int = 0;               // Frame delay (milliseconds)
-    var HasStarted:Bool = false;          // Ready to output frames
-    var FileStream:FileOutput;
+    var width:Int;
+    var height:Int;
+    var repeat:Int = -1;                    // -1: no repeat, 0: infinite, >0: repeat count
+    var frameDelay:Int = 0;                 // Frame delay (milliseconds)
+    var hasStarted:Bool = false;            // Ready to output frames
+    var fileStream:FileOutput;
 
-    var CurrentFrame:GifFrame;
-    var Pixels:Uint8Array;
-    var FlippedY:Bool = false;
-    var IndexedPixels:Uint8Array;             // Converted frame indexed to palette
-    var ColorDepth:Int;                   // Number of bit planes
-    var ColorTab:Uint8Array;                  // RGB palette
-    var UsedEntry:Array<Bool>;            // Active palette entries
-    var PaletteSize:Int = 7;              // Color table size (bits-1)
-    var DisposalCode:Int = -1;            // Disposal code (-1 = use default)
-    var ShouldCloseStream:Bool = false;   // Close stream when finished
-    var IsFirstFrame:Bool = true;
-    var IsSizeSet:Bool = false;           // If false, get size from first frame
-    var SampleInterval:Int = 10;          // Default sample interval for quantizer
+    var currentFrame:GifFrame;
+    var pixels:Uint8Array;
+    var flippedY:Bool = false;
+    var indexedPixels:Uint8Array;           // Converted frame indexed to palette
+    var colorDepth:Int;                     // Number of bit planes
+    var colorTab:Uint8Array;                // RGB palette
+    var usedEntry:Array<Bool>;              // Active palette entries
+    var paletteSize:Int = 7;                // Color table size (bits-1)
+    var disposalCode:Int = -1;              // Disposal code (-1 = use default)
+    var shouldCloseStream:Bool = false;     // Close stream when finished
+    var isFirstFrame:Bool = true;
+    var isSizeSet:Bool = false;             // If false, get size from first frame
+    var sampleInterval:Int = 10;            // Default sample interval for quantizer
 
     var nq:NeuQuant;
     var lzwEncoder:LzwEncoder;
@@ -37,13 +37,13 @@ class GifEncoder {
     /// the maximum 256 colors allowed by the GIF specification). Lower values (minimum = 1)
     /// produce better colors, but slow processing significantly. Higher values will speed
     /// up the quantization pass at the cost of lower image quality (maximum = 100).</param>
-    public function new(repeat:Int = -1, quality:Int = 10, flippedY:Bool = false )
+    public function new(_repeat:Int = -1, _quality:Int = 10, _flippedY:Bool = false )
     {
         if (repeat >= 0)
-            Repeat = repeat;
-        SampleInterval = Std.int(Maths.clamp(quality, 1, 100));
-        UsedEntry = [for (i in 0...256) false];
-        FlippedY = flippedY;
+            repeat = _repeat;
+        sampleInterval = Std.int(Maths.clamp(_quality, 1, 100));
+        usedEntry = [for (i in 0...256) false];
+        flippedY = _flippedY;
         
         nq = new NeuQuant();
         lzwEncoder = new LzwEncoder();
@@ -56,17 +56,17 @@ class GifEncoder {
     /// <param name="ms">Delay time in microseconds</param>
     public function SetDelay(ms:Int):Void
     {
-        FrameDelay = Math.round(ms / 10);
+        frameDelay = Math.round(ms / 10);
     }
 
     /// <summary>
     /// Sets frame rate in frames per second. Equivalent to <code>SetDelay(1000/fps)</code>.
     /// </summary>
     /// <param name="fps">Frame rate</param>
-    public function SetFrameRate(fps:Float):Void
+    public function setFramerate(fps:Float):Void
     {
         if (fps > 0)
-            FrameDelay = Math.round(100 / fps);
+            frameDelay = Math.round(100 / fps);
     }
 
     /// <summary>
@@ -75,72 +75,72 @@ class GifEncoder {
     /// <code>Finish()</code> flushes all frames.
     /// </summary>
     /// <param name="frame">GifFrame containing frame to write.</param>
-    public function AddFrame(frame:GifFrame):Void
+    public function addFrame(frame:GifFrame):Void
     {
         if (frame == null)
             throw "Can't add a null frame to the gif.";
 
-        if (!HasStarted)
+        if (!hasStarted)
             throw "Call Start() before adding frames to the gif.";
 
         // Use first frame's size
-        if (!IsSizeSet)
-            SetSize(frame.Width, frame.Height);
+        if (!isSizeSet)
+            setSize(frame.width, frame.height);
 
-        CurrentFrame = frame;
-        GetImagePixels();
-        AnalyzePixels();
+        currentFrame = frame;
+        getImagepixels();
+        analyzepixels();
 
-        if (IsFirstFrame)
+        if (isFirstFrame)
         {
-            WriteLSD();
-            WritePalette();
+            writeLSD();
+            writePalette();
 
-            if (Repeat >= 0)
-                WriteNetscapeExt();
+            if (repeat >= 0)
+                writeNetscapeExt();
         }
 
-        WriteGraphicCtrlExt();
-        WriteImageDesc();
+        writeGraphicCtrlExt();
+        writeImageDesc();
 
-        if (!IsFirstFrame)
-            WritePalette();
+        if (!isFirstFrame)
+            writePalette();
 
-        WritePixels();
-        IsFirstFrame = false;
+        writePixels();
+        isFirstFrame = false;
     }
 
     /// <summary>
     /// Initiates GIF file creation on the given stream. The stream is not closed automatically.
     /// </summary>
-    /// <param name="os">OutputStream on which GIF images are written, has to be binary and little endian</param>
-    public function Start_Output(os:FileOutput):Void
+    /// <param name="out">OutputStream on which GIF images are written, has to be binary and little endian</param>
+    public function start_output(out:FileOutput):Void
     {
-        if (os == null)
+        if (out == null)
             throw "File output is null.";
 
-        ShouldCloseStream = false;
-        FileStream = os;
+        shouldCloseStream = false;
+        fileStream = out;
 
         try {
-            FileStream.writeString("GIF89a"); // header
+            fileStream.writeString("GIF89a"); // header
         }
         catch (e:Dynamic) {
             throw e;
         }
-        HasStarted = true;
+        hasStarted = true;
     }
 
     /// <summary>
     /// Initiates writing of a GIF file with the specified name. The stream will be handled for you.
     /// </summary>
-    /// <param name="file">String containing output file name</param>
-    public function Start_File(file:String):Void
+    /// <param name="path">String path to the file</param>
+    public function start_File(path:String):Void
     {
         try {
-            FileStream = File.write(file);
-            Start_Output(FileStream);
-            ShouldCloseStream = true;
+            fileStream = File.write(path);
+            start_output(fileStream);
+            shouldCloseStream = true;
         }
         catch (e:Dynamic) {
             throw e;
@@ -151,20 +151,20 @@ class GifEncoder {
     /// Flushes any pending data and closes output file.
     /// If writing to an OutputStream, the stream is not closed.
     /// </summary>
-    public function Finish():Void
+    public function finish():Void
     {
-        if (!HasStarted)
+        if (!hasStarted)
             throw "Can't finish a non-started gif.";
 
-        HasStarted = false;
+        hasStarted = false;
 
         try
         {
-            FileStream.writeByte(0x3b); // Gif trailer
-            FileStream.flush();
+            fileStream.writeByte(0x3b); // Gif trailer
+            fileStream.flush();
 
-            if (ShouldCloseStream)
-                FileStream.close();
+            if (shouldCloseStream)
+                fileStream.close();
         }
         catch (e:Dynamic)
         {
@@ -172,143 +172,143 @@ class GifEncoder {
         }
 
         // Reset for subsequent use
-        FileStream = null;
-        CurrentFrame = null;
-        IndexedPixels = null;
-        ColorTab = null;
-        ShouldCloseStream = false;
-        IsFirstFrame = true;
+        fileStream = null;
+        currentFrame = null;
+        indexedPixels = null;
+        colorTab = null;
+        shouldCloseStream = false;
+        isFirstFrame = true;
     }
 
     // Sets the GIF frame size.
-    function SetSize(w:Int, h:Int):Void
+    function setSize(w:Int, h:Int):Void
     {
-        Width = w;
-        Height = h;
+        width = w;
+        height = h;
         //Now that the size is set, we can allocate frame data arrays;
-        Pixels = new Uint8Array(w * h * 3);
-        IndexedPixels = new Uint8Array(w * h);
-        IsSizeSet = true;
+        pixels = new Uint8Array(w * h * 3);
+        indexedPixels = new Uint8Array(w * h);
+        isSizeSet = true;
     }
     
-    function GetImagePixels():Void {
-        if (!FlippedY) {
-            Pixels = CurrentFrame.Data;
+    function getImagepixels():Void {
+        if (!flippedY) {
+            pixels = currentFrame.data;
         }
         else {
-            var stride = CurrentFrame.Width * 3;
-            for(y in 0...CurrentFrame.Height){
-                Pixels.set(CurrentFrame.Data.subarray((CurrentFrame.Height - 1 - y) * stride, (CurrentFrame.Height - y) * stride), y * stride);
+            var stride = currentFrame.width * 3;
+            for(y in 0...currentFrame.height){
+                pixels.set(currentFrame.data.subarray((currentFrame.height - 1 - y) * stride, (currentFrame.height - y) * stride), y * stride);
             }
         }
     }
 
     // Analyzes image colors and creates color map.
-    function AnalyzePixels():Void
+    function analyzepixels():Void
     {
-        nq.reset(Pixels, Pixels.length, SampleInterval);
-        ColorTab = nq.Process(); // Create reduced palette
+        nq.reset(pixels, pixels.length, sampleInterval);
+        colorTab = nq.process(); // Create reduced palette
 
         // Map image pixels to new palette
         var k:Int = 0;
-        for (i in 0...(CurrentFrame.Width * CurrentFrame.Height))
+        for (i in 0...(currentFrame.width * currentFrame.height))
         {
-            var index = nq.Map(Pixels[k++] & 0xff, Pixels[k++] & 0xff, Pixels[k++] & 0xff);
-            UsedEntry[index] = true;
-            IndexedPixels[i] = index;
+            var index = nq.map(pixels[k++] & 0xff, pixels[k++] & 0xff, pixels[k++] & 0xff);
+            usedEntry[index] = true;
+            indexedPixels[i] = index;
         }
-        ColorDepth = 8;
-        PaletteSize = 7;
+        colorDepth = 8;
+        paletteSize = 7;
     }
 
     // Writes Graphic Control Extension.
-    function WriteGraphicCtrlExt():Void
+    function writeGraphicCtrlExt():Void
     {
-        FileStream.writeByte(0x21); // Extension introducer
-        FileStream.writeByte(0xf9); // GCE label
-        FileStream.writeByte(4);    // Data block size
+        fileStream.writeByte(0x21); // Extension introducer
+        fileStream.writeByte(0xf9); // GCE label
+        fileStream.writeByte(4);    // data block size
 
         // Packed fields
-        FileStream.writeByte(0 |     // 1:3 reserved
+        fileStream.writeByte(0 |     // 1:3 reserved
                              0 |     // 4:6 disposal
                              0 |     // 7   user input - 0 = none
                              0 );    // 8   transparency flag
                                // :todo: Deleted a Convert.toByte, necessary?
 
-        FileStream.writeInt16(FrameDelay); // Delay x 1/100 sec
-        FileStream.writeByte(0); // Transparent color index
-        FileStream.writeByte(0); // Block terminator
+        fileStream.writeInt16(frameDelay); // Delay x 1/100 sec
+        fileStream.writeByte(0); // Transparent color index
+        fileStream.writeByte(0); // Block terminator
     }
 
     // Writes Image Descriptor.
-    function WriteImageDesc():Void
+    function writeImageDesc():Void
     {
-        FileStream.writeByte(0x2c); // Image separator
-        FileStream.writeInt16(0);                // Image position x,y = 0,0
-        FileStream.writeInt16(0);
-        FileStream.writeInt16(Width);          // image size
-        FileStream.writeInt16(Height);
+        fileStream.writeByte(0x2c); // Image separator
+        fileStream.writeInt16(0);                // Image position x,y = 0,0
+        fileStream.writeInt16(0);
+        fileStream.writeInt16(width);          // image size
+        fileStream.writeInt16(height);
 
         // Packed fields
-        if (IsFirstFrame)
+        if (isFirstFrame)
         {
-            FileStream.writeByte(0); // No LCT  - GCT is used for first (or only) frame
+            fileStream.writeByte(0); // No LCT  - GCT is used for first (or only) frame
         }
         else
         {
             // Specify normal LCT
-            FileStream.writeByte(0x80 |           // 1 local color table  1=yes
+            fileStream.writeByte(0x80 |           // 1 local color table  1=yes
                                     0 |              // 2 interlace - 0=no
                                     0 |              // 3 sorted - 0=no
                                     0 |              // 4-5 reserved
-                                    PaletteSize); // 6-8 size of color table
+                                    paletteSize); // 6-8 size of color table
         }
     }
 
     // Writes Logical Screen Descriptor.
-    function WriteLSD():Void
+    function writeLSD():Void
     {
         // Logical screen size
-        FileStream.writeInt16(Width);
-        FileStream.writeInt16(Height);
+        fileStream.writeInt16(width);
+        fileStream.writeInt16(height);
 
         // Packed fields
-        FileStream.writeByte(0x80 |           // 1   : global color table flag = 1 (gct used)
+        fileStream.writeByte(0x80 |           // 1   : global color table flag = 1 (gct used)
                              0x70 |           // 2-4 : color resolution = 7
                              0x00 |           // 5   : gct sort flag = 0
-                             PaletteSize); // 6-8 : gct size
+                             paletteSize); // 6-8 : gct size
 
-        FileStream.writeByte(0); // Background color index
-        FileStream.writeByte(0); // Pixel aspect ratio - assume 1:1
+        fileStream.writeByte(0); // Background color index
+        fileStream.writeByte(0); // Pixel aspect ratio - assume 1:1
     }
 
     // Writes Netscape application extension to define repeat count.
-    function WriteNetscapeExt():Void
+    function writeNetscapeExt():Void
     {
-        FileStream.writeByte(0x21);    // Extension introducer
-        FileStream.writeByte(0xff);    // App extension label
-        FileStream.writeByte(11);      // Block size
-        FileStream.writeString("NETSCAPE" + "2.0"); // App id + auth code
-        FileStream.writeByte(3);       // Sub-block size
-        FileStream.writeByte(1);       // Loop sub-block id
-        FileStream.writeInt16(Repeat);            // Loop count (extra iterations, 0=repeat forever)
-        FileStream.writeByte(0);       // Block terminator
+        fileStream.writeByte(0x21);    // Extension introducer
+        fileStream.writeByte(0xff);    // App extension label
+        fileStream.writeByte(11);      // Block size
+        fileStream.writeString("NETSCAPE" + "2.0"); // App id + auth code
+        fileStream.writeByte(3);       // Sub-block size
+        fileStream.writeByte(1);       // Loop sub-block id
+        fileStream.writeInt16(repeat);            // Loop count (extra iterations, 0=repeat forever)
+        fileStream.writeByte(0);       // Block terminator
     }
 
     // Write color table.
-    function WritePalette():Void
+    function writePalette():Void
     {
-        FileStream.write(ColorTab.toBytes());
-        var n:Int = (3 * 256) - ColorTab.length;
+        fileStream.write(colorTab.toBytes());
+        var n:Int = (3 * 256) - colorTab.length;
 
         for (i in 0...n)
-            FileStream.writeByte(0);
+            fileStream.writeByte(0);
     }
 
     // Encodes and writes pixel data.
-    function WritePixels():Void
+    function writePixels():Void
     {
-        lzwEncoder.reset(IndexedPixels, ColorDepth);
-        lzwEncoder.Encode(FileStream);
+        lzwEncoder.reset(indexedPixels, colorDepth);
+        lzwEncoder.encode(fileStream);
     }
 }

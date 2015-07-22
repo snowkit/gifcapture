@@ -80,7 +80,7 @@ class NeuQuant {
         }
     }
 
-    public function ColorMap():Uint8Array
+    public function colormap():Uint8Array
     {
         var map = new Uint8Array(3 * netsize);
         var index = new Int32Array(netsize);
@@ -101,7 +101,7 @@ class NeuQuant {
     }
 
     // Insertion sort of network and building of netindex[0..255] (to do after unbias)
-    public function Inxbuild():Void
+    public function inxbuild():Void
     {
         var i:Int;
         var j:Int;
@@ -170,8 +170,8 @@ class NeuQuant {
             netindex[j] = maxnetpos;
     }
 
-    // Main Learning Loop
-    public function Learn():Void
+    // Main learning Loop
+    public function learn():Void
     {
         var i:Int;
         var j:Int;
@@ -238,12 +238,12 @@ class NeuQuant {
             b = (p[pix + 0] & 0xff) << netbiasshift;
             g = (p[pix + 1] & 0xff) << netbiasshift;
             r = (p[pix + 2] & 0xff) << netbiasshift;
-            j = Contest(b, g, r);
+            j = contest(b, g, r);
 
-            Altersingle(alpha, j, b, g, r);
+            altersingle(alpha, j, b, g, r);
 
             if (rad != 0)
-                Alterneigh(rad, j, b, g, r); // Alter neighbours
+                alterneigh(rad, j, b, g, r); // Alter neighbours
 
             pix += step;
 
@@ -271,7 +271,7 @@ class NeuQuant {
     }
 
     // Search for BGR values 0..255 (after net is unbiased) and return colour index
-    public function Map(b:Int, g:Int, r:Int):Int
+    public function map(b:Int, g:Int, r:Int):Int
     {
         var i:Int;
         var j:Int;
@@ -374,16 +374,16 @@ class NeuQuant {
         return best;
     }
 
-    public function Process():Uint8Array
+    public function process():Uint8Array
     {
-        Learn();
-        Unbiasnet();
-        Inxbuild();
-        return ColorMap();
+        learn();
+        unbiasnet();
+        inxbuild();
+        return colormap();
     }
 
     // Unbias network to give byte values 0..255 and record position i to prepare for sort
-    public function Unbiasnet():Void
+    public function unbiasnet():Void
     {
         for (i in 0...netsize)
         {
@@ -395,7 +395,7 @@ class NeuQuant {
     }
 
     // Move adjacent neurons by precomputed alpha*(1-((i-j)^2/[r]^2)) in radpower[|i-j|]
-    function Alterneigh(rad:Int, i:Int, b:Int, g:Int, r:Int):Void
+    function alterneigh(rad:Int, i:Int, b:Int, g:Int, r:Int):Void
     {
         var j:Int;
         var k:Int;
@@ -445,7 +445,7 @@ class NeuQuant {
     }
 
     // Move neuron i towards biased (b,g,r) by factor alpha
-    function Altersingle(alpha:Int, i:Int, b:Int, g:Int, r:Int):Void
+    function altersingle(alpha:Int, i:Int, b:Int, g:Int, r:Int):Void
     {
         /* Alter hit neuron */
         var n:Int32Array = network.subarray(i * 4, i * 4 + 4);
@@ -455,7 +455,7 @@ class NeuQuant {
     }
 
     // Search for biased BGR values
-    function Contest(b:Int, g:Int, r:Int):Int
+    function contest(b:Int, g:Int, r:Int):Int
     {
         // Finds closest neuron (min dist) and updates freq
         // Finds best neuron (min dist-bias) and returns position
