@@ -1,3 +1,12 @@
+/*
+ * No copyright asserted on the source code of this class. May be used
+ * for any purpose.
+ * 
+ * Original code by Kevin Weiner, FM Software.
+ * Adapted by Thomas Hourdel.
+ * Haxe port by Tilman Schmidt.
+ */
+ 
 package moments.encoder;
 import luxe.utils.Maths;
 import snow.api.buffers.Uint8Array;

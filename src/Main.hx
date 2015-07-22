@@ -68,7 +68,7 @@ class Main extends luxe.Game {
             Luxe.draw.box( {
                x:0,
                y:10,
-               w:Luxe.screen.w * (recorder.lastSavedFrame / recorder.frameCount),
+               w:Luxe.screen.w * ((recorder.lastSavedFrame + 1) / recorder.frameCount),
                h:20,
                immediate:true
             });

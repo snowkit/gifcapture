@@ -1,4 +1,21 @@
-package moments.encoder;
+/*
+ * No copyright asserted on the source code of this class. May be used
+ * for any purpose, however, refer to the Unisys LZW patent for restrictions
+ * on use of the associated LZWEncoder class :
+ * 
+ * The Unisys patent expired on 20 June 2003 in the USA, in Europe it expired
+ * on 18 June 2004, in Japan the patent expired on 20 June 2004 and in Canada
+ * it expired on 7 July 2004. The U.S. IBM patent expired 11 August 2006, The
+ * Software Freedom Law Center says that after 1 October 2006, there will be
+ * no significant patent claims interfering with employment of the GIF format.
+ * 
+ * Original code by Kevin Weiner, FM Software.
+ * Adapted from Jef Poskanzer's Java port by way of J. M. G. Elliott.
+ * 
+ * Haxe port by Tilman Schmidt.
+ */
+ 
+ package moments.encoder;
 import snow.api.buffers.Int32Array;
 import snow.api.buffers.Uint8Array;
 

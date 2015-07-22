@@ -13,32 +13,56 @@ import Runner;
 #end
 
 class Recorder {
+        /** Current recording state */
     public var state(default, null):RecorderState = Paused;
+        /** Frame number of the frame most recently saved, updated by the background encoding thread. Ranges between 0 and frameCount - 1 */
     public var lastSavedFrame(default, null):Int = -1;
-    
-    var encoder:GifEncoder;
-    var quality:Int;
-    var repeat:Int;
-    var targetTex:RenderTexture;
+        /** Total number of frames recorded */
+    public var frameCount(default, null):Int = 0;
+
+        /** Minimum time the recorder waits to record another frame */
+    var minTimePerFrame:Float;
+
+        /** Maximum number of frames that can be recorded. Inteded to limit memory consumption. */
+    var maxFrames:Int;
+
+        /** Width of the gif */
     var frameWidth:Int;
+        /** Height of the gif */
     var frameHeight:Int;
     
+        /** The recorded frames which are then encoded into the gif. */
     var savedFrames:Array<Uint8Array>;
+        /** For each frame i in the savedFrames array, this records the actual difference in time between recording the frame and the frame before it, in seconds. */
     var frameDelays:Array<Float>;
-    var minTimePerFrame:Float;
-    var maxRecordingTime:Float;
-    var maxFrames:Int;
-    public var frameCount(default, null):Int = 0;
     
-    var timeSinceLastSave:Float = 0;
+        /** The actual gif encoder used in the background thread to save the gif. */
+    var encoder:GifEncoder;
+        /** The quality of the gif encoding. From 1 to 100, 1 being best quality but slowest processing, 100 being worst but fastest. */
+    var quality:Int;
+        /** How many times to repeat the gif. -1 means never (play only once), 0 means inifitely */
+    var repeat:Int;
+        /** Texture to which the scene is rendered to, from which the gif data is read */
+    var targetTex:RenderTexture;
 
+        /** Tracking variable for timing frame recording. */
+    var timeSinceLastSave:Float = 0;
+        /** The thread in which the gif is being encoded. */
     var saveThread:Thread;
+        /** The time it took for the last gif to save. Should only be written to by the encoding thread. */
+    var savingTime:Float = 0;
     
+        /** Construct a new recorder object. 
+            _frameWidth and _frameHeigt: The dimensions of the resulting gif. Can be different to the screen size. 
+            _maxFPS: The maximum framerate of the gif, and the rate at which the recorder tries to record new frames for the gif. 
+            _maxTime: The maximum recording time for one gif, inteded to limit memory consumption. 
+            _quality: The encoding quality of the gif, from 1 to 100. 1 results in best quality, but slower processing. 100 gives worst quality but fastest processing. 
+            _repeat: The number of times the gif should repeat. -1 means never (play once), 0 means infinitely. 
+        */
     public function new(_frameWidth:Int, _frameHeight:Int, _maxFps:Int, _maxTime:Float, _quality:Int = 10, _repeat:Int = -1) {
         frameWidth = _frameWidth;
         frameHeight = _frameHeight;
         minTimePerFrame = 1 / _maxFps;
-        maxRecordingTime = _maxTime;
         maxFrames = Math.round(_maxTime * _maxFps);
         quality = _quality;
         repeat = _repeat;
@@ -54,6 +78,7 @@ class Recorder {
         Runner.init();
     }
     
+        /** Call this in your update loop to ensure the onEncodingFinished callback is being executed */
     public function update() {
         Runner.run();
     }
@@ -101,6 +126,7 @@ class Recorder {
         saveThread = null;
     }
 
+        /** Start the gif encoding and saving to a file specified by path. The file will be created if it does not exist, or overwritten otherwise. */
     public function save(path:String) {
         if (frameCount == 0) {
             #if !no_gif_logging
@@ -116,12 +142,14 @@ class Recorder {
         saveThread = Runner.thread(saveThreadFunc.bind(path));
     }
 
+        /** Terminate the encoding thread and finish the gif at whatever point it was currently at. */
     public function abortSaving(){
         if(state == Saving) saveThread.sendMessage(ThreadMessages.abort);
         state = Paused;
         reset();
     }
     
+        /** The frame recording function. Call this after each render loop of the game. */
     public function onFrameRendered() {
         if (state != Recording) return;
         if (Luxe.time - timeSinceLastSave >= minTimePerFrame) {
@@ -154,7 +182,6 @@ class Recorder {
         }
     }
     
-    var savingTime:Float = 0;
     function saveThreadFunc(path:String):Void {
         var t = Luxe.time;
         var encoder = new GifEncoder(repeat, quality, true);
@@ -190,20 +217,23 @@ class Recorder {
         savingTime = Luxe.time - t;
         Runner.call_primary(onEncodingFinished);
     }
-    //Copies RGBA pixel data from source to target as RGB pixels
-    //source should be of length width * height * 4, and target of size width * height * 3
+
+        /** Copies RGBA pixel data from source to target as RGB pixels. 
+            Source should be of length width * height * 4, and target of size width * height * 3
+        */
     function RGBAtoRGB(source:Uint8Array, target:Uint8Array):Void{
         for(i in 0...(frameWidth * frameHeight)){
            target.set(source.subarray(i * 4, i * 4 + 3), i * 3);
         }
     }
     
+        /** Called at the end of the encoding thread */
     function onEncodingFinished():Void {
         #if !no_gif_logging
             trace('Gif recorder / Encoding finished. Time taken was $savingTime seconds');
         #end
     }
-
+        /** Used by the background encoding thread to emit traces on the primary thread */
     public function runTrace(message:Dynamic):Void{
         trace(message);
     }
