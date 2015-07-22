@@ -26,8 +26,9 @@
 package moments.encoder;
 import snow.api.buffers.Uint8Array;
 typedef GifFrame = {
+        /** Dimensions of the frame */
     var width:Int;
     var height:Int;
-    //Pixels data in unsigned bytes, rgb format
+        /** Pixels data in unsigned bytes, rgb format */
     var data:Uint8Array;
 }

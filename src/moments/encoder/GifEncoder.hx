@@ -242,7 +242,6 @@ class GifEncoder {
                              0 |     // 4:6 disposal
                              0 |     // 7   user input - 0 = none
                              0 );    // 8   transparency flag
-                               // :todo: Deleted a Convert.toByte, necessary?
 
         fileStream.writeInt16(frameDelay); // Delay x 1/100 sec
         fileStream.writeByte(0); // Transparent color index
