@@ -5,7 +5,7 @@ import phoenix.RenderTexture;
 import snow.api.buffers.Int32Array;
 import snow.api.buffers.Uint8Array;
 import luxe.Input;
-import moments.encoder.GifEncoder;
+import gif.GifEncoder;
 import snow.modules.opengl.GL;
 import sys.io.File;
 import Recorder;

@@ -1,7 +1,7 @@
 package;
 
 import luxe.Vector;
-import moments.encoder.GifEncoder;
+import gif.GifEncoder;
 import phoenix.RenderTexture;
 import haxe.io.UInt8Array;
 import snow.modules.opengl.GL;
