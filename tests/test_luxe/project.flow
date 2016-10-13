@@ -1,18 +1,19 @@
 {
   project : {
-    name : 'empty',
+    name : 'moments_test',
     version : '1.0.0',
     author : 'Keymaster',
 
     app : {
       name : 'momentsEncoder',
-      package : 'com.luxeengine.empty',
-      main : 'Main'
+      package : 'com.luxeengine.moments_test',
     },
 
     build : {
+      flags: ['-dce no'],
       dependencies : {
         luxe : '*',
+        linc_dialogs : '*',
         moments : '*',
       }
     },

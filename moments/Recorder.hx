@@ -1,6 +1,5 @@
 package moments;
 
-import luxe.Vector;
 import gif.GifEncoder;
 import phoenix.RenderTexture;
 import haxe.io.UInt8Array;
@@ -9,8 +8,6 @@ import moments.Runner;
 
 #if cpp
     import cpp.vm.Thread;
-#elseif neko
-    import neko.vm.Thread;
 #end
 
 class Recorder {
@@ -86,7 +83,7 @@ class Recorder {
 
     public function destroy() {
         if(state == Saving) abortSaving();
-        targetTex.destroy(); //:todo: is all of the nulling necessary?
+        targetTex.destroy();
         savedFrames = null;
         frameDelays = null;
         saveThread = null;
@@ -152,24 +149,21 @@ class Recorder {
 
         /** The frame recording function. Call this after each render loop of the game. */
     public function onFrameRendered() {
+        
         if (state != Recording) return;
-        if (Luxe.time - timeSinceLastSave >= minTimePerFrame) {
-            var oldViewport = Luxe.renderer.batcher.view.viewport.clone();
-            Luxe.renderer.batcher.view.viewport.set(0, 0, frameWidth, frameHeight);
-            Luxe.renderer.target = targetTex;
-            Luxe.renderer.clear(Luxe.renderer.clear_color);
-            Luxe.renderer.batcher.draw();
-            Luxe.renderer.batcher.view.viewport.copy_from(oldViewport);
+        if (haxe.Timer.stamp() - timeSinceLastSave >= minTimePerFrame) {
 
             if (savedFrames.length == frameCount) {
                 savedFrames.push(new snow.api.buffers.Uint8Array(frameWidth * frameHeight * 4));
                 frameDelays.push(0);
             }
 
+            GL.flush();
+            GL.finish();
+            GL.bindFramebuffer(GL.FRAMEBUFFER, 0);
             GL.readPixels(0, 0, frameWidth, frameHeight, GL.RGBA, GL.UNSIGNED_BYTE, savedFrames[frameCount]);
-            Luxe.renderer.target = null;
 
-            frameDelays[frameCount] = Luxe.time - timeSinceLastSave;
+            frameDelays[frameCount] = haxe.Timer.stamp() - timeSinceLastSave;
             frameCount++;
 
             if (frameCount == maxFrames) {
@@ -179,12 +173,12 @@ class Recorder {
                 #end
             }
 
-            timeSinceLastSave = Luxe.time;
+            timeSinceLastSave = haxe.Timer.stamp();
         }
     }
 
     function saveThreadFunc(path:String):Void {
-        var t = Luxe.time;
+        var t = haxe.Timer.stamp();
         var encoder = new GifEncoder(repeat, quality, true);
         encoder.setDelay(Math.round(1000 * minTimePerFrame));
         encoder.startFile(path);
@@ -215,7 +209,7 @@ class Recorder {
         encoder.finish();
         state = Paused;
         reset();
-        savingTime = Luxe.time - t;
+        savingTime = haxe.Timer.stamp() - t;
         Runner.call_primary(onEncodingFinished);
     }
 

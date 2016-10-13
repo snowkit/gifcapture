@@ -4,10 +4,29 @@ import phoenix.RenderTexture;
 
 import luxe.Input;
 import gif.GifEncoder;
-import moments.Recorder;
-
 import snow.modules.opengl.GL;
 import snow.api.buffers.*;
+
+import moments.Recorder;
+
+@:enum abstract GifQuality(Int) 
+  from Int to Int {
+    var Best = 1;
+    var VeryHigh = 10;
+    var QuiteHigh = 20;
+    var High = 35;
+    var Mid = 50;
+    var Low = 65;
+    var QuiteLow = 80;
+    var VeryLow = 90;
+    var Worst = 100;
+}
+
+@:enum abstract GifRepeat(Int) 
+  from Int to Int {
+    var NoLoop = -1;
+    var Infinite = 0;
+}
 
 class Main extends luxe.Game {
     var boxGeom:QuadGeometry;
@@ -21,7 +40,9 @@ class Main extends luxe.Game {
            y:100
         });
 
-        recorder = new Recorder(Std.int(Luxe.screen.w / 4), Std.int(Luxe.screen.h / 4), 30, 10, 100, 0);
+        recorder = new Recorder(Std.int(Luxe.screen.w), Std.int(Luxe.screen.h), 30, 10, GifQuality.Worst, GifRepeat.Infinite);
+
+        Luxe.on(luxe.Ev.tickend, tick_end);
     }
 
     override function onkeyup(e:KeyEvent) {
@@ -47,17 +68,17 @@ class Main extends luxe.Game {
                 trace('reset recorder');
                 recorder.reset();
             case Key.key_3:
-                var path = Luxe.snow.io.module.dialog_save('Save Gif');
+                var path = dialogs.Dialogs.save('Save GIF');
                 if(path != ''){
                     recorder.save(path);
                 }
                 else{
-                    trace('Gif recorder / No file path specified, gif will not be saved!');
+                    trace('GIF recorder / No file path specified, GIF will not be saved!');
                 }
         }
     }
 
-    override public function onpostrender() {
+    function tick_end(_) {
         recorder.onFrameRendered();
     }
 

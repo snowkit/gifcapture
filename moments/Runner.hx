@@ -60,7 +60,7 @@ class Runner {
         trace('calling on main with lock (${_timeout}s timeout)');
 
         var res:T = null;
-        var start = Luxe.time;
+        var start = haxe.Timer.stamp();
         var lock = new cpp.vm.Lock();
 
             //add to main to call this
@@ -72,7 +72,7 @@ class Runner {
             //wait for the lock release or timeout
         lock.wait(_timeout);
             //measure it for reference
-        trace('unlocked after ${Luxe.time - start}');
+        trace('unlocked after ${haxe.Timer.stamp() - start}');
 
             //clean up
         lock = null;
