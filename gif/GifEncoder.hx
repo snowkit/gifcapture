@@ -351,6 +351,9 @@ typedef GifFrame = {
     var width:Int;
         /** Height of the frame */
     var height:Int;
+        /** Delay of the frame in seconds.
+            This value gets floored when encoded due to gif limitations */
+    var delay:Float;
         /** Pixels data in unsigned bytes, rgb format */
     var data:UInt8Array;
 

@@ -32,15 +32,21 @@ class Main extends luxe.Game {
     var boxGeom:QuadGeometry;
     var recorder:Recorder;
 
+    override function config(config:luxe.GameConfig) {
+        config.window.width = 480;
+        config.window.height = 320;
+        return config;
+    }
+
     override function ready() {
         boxGeom = Luxe.draw.box( {
            w:50,
            h:50,
            x:100,
            y:100
-        });
+        });        
 
-        recorder = new Recorder(Std.int(Luxe.screen.w), Std.int(Luxe.screen.h), 30, 10, GifQuality.Worst, GifRepeat.Infinite);
+        recorder = new Recorder(Std.int(Luxe.screen.w), Std.int(Luxe.screen.h), 60, 10, GifQuality.Worst, GifRepeat.Infinite);
 
         Luxe.on(luxe.Ev.tickend, tick_end);
     }
@@ -48,13 +54,16 @@ class Main extends luxe.Game {
     override function onkeyup(e:KeyEvent) {
 	    if (e.keycode == Key.escape) {
             recorder.destroy();
-            recorder = null; // :todo: necessary?
+            recorder = null;
             Luxe.shutdown();
         }
     }
 
     override public function onkeydown(event:KeyEvent) {
         switch(event.keycode) {
+            case Key.key_v:
+                sdl.SDL.GL_SetSwapInterval(false);
+
             case Key.space:
                 if (recorder.state == RecorderState.Paused) {
                     trace('turn on recording');
@@ -69,18 +78,31 @@ class Main extends luxe.Game {
                 recorder.reset();
             case Key.key_3:
                 var path = dialogs.Dialogs.save('Save GIF');
-                if(path != ''){
+                if(path != '') {
                     recorder.save(path);
-                }
-                else{
+                } else{
                     trace('GIF recorder / No file path specified, GIF will not be saved!');
                 }
         }
     }
 
+    var last_tick = 0.0;
+
     function tick_end(_) {
-        recorder.onFrameRendered();
-    }
+
+        var frame_delta = Luxe.time - last_tick;
+            last_tick = Luxe.time;
+
+        var frame_data = new snow.api.buffers.Uint8Array(Luxe.screen.w * Luxe.screen.h * 3);
+        GL.readPixels(0, 0, Luxe.screen.w, Luxe.screen.h, GL.RGB, GL.UNSIGNED_BYTE, frame_data);
+
+        var frame_in = haxe.io.UInt8Array.fromBytes(frame_data.toBytes());
+        recorder.onFrameRendered(frame_in, frame_delta);
+
+        frame_data = null;
+        frame_in = null;
+
+    } //tick_end
 
     override function update(dt:Float) {
         recorder.update();
