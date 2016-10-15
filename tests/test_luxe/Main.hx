@@ -9,24 +9,6 @@ import snow.api.buffers.*;
 
 import moments.Recorder;
 
-@:enum abstract GifQuality(Int) 
-  from Int to Int {
-    var Best = 1;
-    var VeryHigh = 10;
-    var QuiteHigh = 20;
-    var High = 35;
-    var Mid = 50;
-    var Low = 65;
-    var QuiteLow = 80;
-    var VeryLow = 90;
-    var Worst = 100;
-}
-
-@:enum abstract GifRepeat(Int) 
-  from Int to Int {
-    var NoLoop = -1;
-    var Infinite = 0;
-}
 
 class Main extends luxe.Game {
     var boxGeom:QuadGeometry;
@@ -38,6 +20,8 @@ class Main extends luxe.Game {
         return config;
     }
 
+    var progress:Float = 0.0;
+
     override function ready() {
         boxGeom = Luxe.draw.box( {
            w:50,
@@ -46,7 +30,17 @@ class Main extends luxe.Game {
            y:100
         });        
 
-        recorder = new Recorder(Std.int(Luxe.screen.w), Std.int(Luxe.screen.h), 50, 5, GifQuality.Worst, GifRepeat.Infinite);
+        recorder = new Recorder(
+            Std.int(Luxe.screen.w), 
+            Std.int(Luxe.screen.h), 
+            fps, 
+            5, //max time
+            GifQuality.Worst, 
+            GifRepeat.Infinite);
+
+        recorder.onprogress = function(_progress:Float) {
+            progress = _progress;
+        }
 
         Luxe.on(luxe.Ev.tickend, tick_end);
     }
@@ -87,20 +81,31 @@ class Main extends luxe.Game {
     }
 
     var last_tick = 0.0;
+    var accum = 0.0;
+    var fps = 50;
+    var mspf = 1/50; //1/fps
 
     function tick_end(_) {
 
         var frame_delta = Luxe.time - last_tick;
-            last_tick = Luxe.time;
+        last_tick = Luxe.time;        
 
-        var frame_data = new snow.api.buffers.Uint8Array(Luxe.screen.w * Luxe.screen.h * 3);
-        GL.readPixels(0, 0, Luxe.screen.w, Luxe.screen.h, GL.RGB, GL.UNSIGNED_BYTE, frame_data);
+        accum += frame_delta;
 
-        var frame_in = haxe.io.UInt8Array.fromBytes(frame_data.toBytes());
-        recorder.onFrameRendered(frame_in, 1/50);
+        if(accum >= mspf) {
 
-        frame_data = null;
-        frame_in = null;
+            var frame_data = new snow.api.buffers.Uint8Array(Luxe.screen.w * Luxe.screen.h * 3);
+            GL.readPixels(0, 0, Luxe.screen.w, Luxe.screen.h, GL.RGB, GL.UNSIGNED_BYTE, frame_data);
+
+            var frame_in = haxe.io.UInt8Array.fromBytes(frame_data.toBytes());
+            recorder.add_frame(frame_in, mspf);
+
+            frame_data = null;
+            frame_in = null;
+
+            accum -= mspf;
+
+        } //
 
     } //tick_end
 
@@ -113,20 +118,21 @@ class Main extends luxe.Game {
             text: '${Luxe.time}'
         });
 
+        if(progress != 0 && recorder.state != Recording) {
+
+            Luxe.draw.box({
+               x: 0, y: Luxe.screen.h - 12,
+               w: Luxe.screen.w * progress, h: 8,
+               immediate:true
+            });
+
+        } //Saving
+
     }
 
     override function update(dt:Float) {
 
         recorder.update();
-        if (recorder.state == RecorderState.Saving) {
-            Luxe.draw.box( {
-               x:0,
-               y:10,
-               w:Luxe.screen.w * ((recorder.lastSavedFrame + 1) / recorder.frameCount),
-               h:20,
-               immediate:true
-            });
-        }
 
         if (Luxe.input.keydown(Key.key_a)) {
             boxGeom.transform.pos.x -= 200 * dt;

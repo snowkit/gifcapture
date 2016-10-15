@@ -1,6 +1,7 @@
 package moments;
 
 import gif.GifEncoder;
+import haxe.io.BytesOutput;
 import phoenix.RenderTexture;
 import haxe.io.UInt8Array;
 import moments.Runner;
@@ -27,6 +28,10 @@ class Recorder {
         /** Height of the gif */
     var frameHeight:Int;
 
+    var flipped:Bool = true;
+
+    var filePath:String = 'moment.gif';
+
         /** The recorded frames which are then encoded into the gif. */
     var savedFrames:Array<GifFrame>;
 
@@ -36,39 +41,44 @@ class Recorder {
     var quality:Int;
         /** How many times to repeat the gif. -1 means never (play only once), 0 means inifitely */
     var repeat:Int;
-        /** Texture to which the scene is rendered to, from which the gif data is read */
-    var targetTex:RenderTexture;
 
         /** Tracking variable for timing frame recording. */
     var timeSinceLastSave:Float = 0;
         /** The thread in which the gif is being encoded. */
     var saveThread:Thread;
+    var encoding_thread:Thread;
         /** The time it took for the last gif to save. Should only be written to by the encoding thread. */
     var savingTime:Float = 0;
 
+    public var onprogress:Float->Void;
+
         /** Construct a new recorder object.
             _frameWidth and _frameHeigt: The dimensions of the resulting gif. Can be different to the screen size.
-            _maxFPS: The maximum framerate of the gif, and the rate at which the recorder tries to record new frames for the gif.
+            _framerate: The desired framerate of the gif, only used if a given frame time is negative
             _maxTime: The maximum recording time for one gif, inteded to limit memory consumption.
             _quality: The encoding quality of the gif, from 1 to 100. 1 results in best quality, but slower processing. 100 gives worst quality but fastest processing.
             _repeat: The number of times the gif should repeat. -1 means never (play once), 0 means infinitely.
         */
-    public function new(_frameWidth:Int, _frameHeight:Int, _maxFps:Int, _maxTime:Float, _quality:Int = 10, _repeat:Int = -1) {
+    public function new(
+            _frameWidth:Int, 
+            _frameHeight:Int, 
+            _framerate:Int, 
+            _maxTime:Float, 
+            _quality:Int = 10, 
+            _repeat:Int = -1
+    ) {
+
         frameWidth = _frameWidth;
         frameHeight = _frameHeight;
-        framerate = _maxFps;
-        maxFrames = Math.ceil(_maxTime * _maxFps);
+        framerate = _framerate;
+        maxFrames = Math.ceil(_maxTime * _framerate);
         quality = _quality;
         repeat = _repeat;
 
-        targetTex = new RenderTexture( {
-           id:'GifTargetTexture',
-           width:frameWidth,
-           height:frameHeight
-        });
-
         savedFrames = [];
         Runner.init();
+        encoding_thread = Runner.thread(encoding_func);
+
     }
 
         /** Call this in your update loop to ensure the onEncodingFinished callback is being executed */
@@ -77,10 +87,17 @@ class Recorder {
     }
 
     public function destroy() {
-        if(state == Saving) abortSaving();
-        targetTex.destroy();
+        
+        encoding_thread.sendMessage(ThreadMessages.abort);
+
+        if(state == Saving) {
+            abortSaving();
+        }
+
         savedFrames = null;
         saveThread = null;
+
+
     }
 
     public function pause() {
@@ -122,15 +139,15 @@ class Recorder {
         /** Start the gif encoding and saving to a file specified by path. The file will be created if it does not exist, or overwritten otherwise. */
     public function save(path:String) {
         
-        if(frameCount == 0) {
+        if(added == 0) {
             print('Attempted save, but nothing has been recorded!');
             return;
         }
 
-        print('Starting encoding...');
+        print('Finishing up...');
 
-        state = Saving;
-        saveThread = Runner.thread(saveThreadFunc.bind(path));
+        filePath = path;
+        encoding_thread.sendMessage(ThreadMessages.commit);
 
     } //save
 
@@ -145,44 +162,66 @@ class Recorder {
 
     } //abortSaving
 
-        /** The frame recording function. Call this after each render loop of the game. */
-    public function onFrameRendered(rgb_pixels:UInt8Array, frame_delta:Float) {
+    var added = 0;
+
+        /** The frame recording function. Call this to add frames to the gif. */
+    public function add_frame(rgb_pixels:UInt8Array, frame_time:Float) {
 
         if(state != Recording) return;
 
-        var frame_time = 1.0/framerate;
+        added++;
 
-        if((haxe.Timer.stamp() - timeSinceLastSave) >= frame_time) {
+        var frame = {
+            width: frameWidth,
+            height: frameHeight,
+            delay: frame_time,
+            data: rgb_pixels
+        };
 
-                //We only push frames if we need them, because
-                //if we call repeatedly we don't have to reallocate the data
-            if(savedFrames.length == frameCount) {                
+            //send the frame to the encoding thread
+        encoding_thread.sendMessage(ThreadMessages.frame);
+        encoding_thread.sendMessage(frame);
 
-                savedFrames.push({
-                    width: frameWidth, height: frameHeight, delay: 0, data: null
-                });
+        frame = null;
 
-            } // if last frame
+        if(added == maxFrames) {
+            state = Paused;
+        }
 
-            var frame = savedFrames[frameCount];
+    } //add_frame
 
-                    //we make a copy of the data because 
-                    //we're encoding in a background thread and need it to stick around
-                frame.data = new UInt8Array(frameWidth * frameHeight * 3);
-                frame.data.view.buffer.blit(0, rgb_pixels.view.buffer, 0, frame.data.length);
-                frame.delay = frame_delta;
+    //     /** The frame recording function. Call this to add frames to the gif. */
+    // public function add_frame(rgb_pixels:UInt8Array, frame_time:Float) {
 
-            timeSinceLastSave = haxe.Timer.stamp();
-            frameCount++;
+    //     if(state != Recording) return;
 
-            if(frameCount == maxFrames) {
-                state = Paused;
-                print('Max frames reached!');
-            }
+    //         //We only push frames if we need them, because
+    //         //if we call repeatedly we don't have to reallocate the data
+    //     if(savedFrames.length == frameCount) {                
 
-        } //if the time is ready
+    //         savedFrames.push({
+    //             width: frameWidth, height: frameHeight, delay: 0, data: null
+    //         });
 
-    } //onFrameRendered
+    //     } // if last frame
+
+    //     var frame = savedFrames[frameCount];
+
+    //             //we make a copy of the data because 
+    //             //we're encoding in a background thread and need it to stick around
+    //         frame.data = new UInt8Array(frameWidth * frameHeight * 3);
+    //         frame.data.view.buffer.blit(0, rgb_pixels.view.buffer, 0, frame.data.length);
+    //         frame.delay = frame_time;
+
+    //     timeSinceLastSave = haxe.Timer.stamp();
+    //     frameCount++;
+
+    //     if(frameCount == maxFrames) {
+    //         state = Paused;
+    //         print('Max frames reached!');
+    //     }
+
+    // } //add_frame
 
     inline function print(v) {
         #if !no_gif_logging 
@@ -190,41 +229,123 @@ class Recorder {
         #end
     }
 
-    function saveThreadFunc(path:String):Void {
+    function encoding_func() {
 
-        var t = haxe.Timer.stamp();
-        var encoder = new GifEncoder(framerate, repeat, quality, true);
-        encoder.startFile(path);
+        var running = true;
+        var encoder = new GifEncoder(
+            frameWidth,
+            frameHeight,
+            framerate,
+            repeat, 
+            quality, 
+            flipped);
 
-        lastSavedFrame = 0;
-        encoder.addFrame(savedFrames[0]);
+        var output = new BytesOutput();
+        var count = 0;
+        
+        encoder.start(output);
 
-        for(i in 1...frameCount) {
+        Sys.println("background thread ready");
 
-            if(Thread.readMessage(false) == ThreadMessages.abort) {
-                    //:todo: this may not be displayed if no recorder.update is run afterwards.
-                #if !no_gif_logging Runner.call_primary(runTrace.bind('Gif recorder / Gif saving was stopped.')); #end
-                break;
-            }
+        while(running) {
+            
+            var message = Thread.readMessage(false);
 
-            encoder.addFrame(savedFrames[i]);
+            switch(message) {
+                
+                case ThreadMessages.abort: {
 
-            lastSavedFrame = i;
+                    running = false;
 
-        } //each frame
-
-        encoder.finish();
-        state = Paused;
-        reset();
-        savingTime = haxe.Timer.stamp() - t;
-        Runner.call_primary(onEncodingFinished);
+                } //abort
+                
+                case ThreadMessages.commit: {
     
-    } //saveThreadFunc
+                    encoder.commit(output);
+
+                    Runner.call_primary(encoding_complete.bind(output));
+                
+                } //commit
+
+                case ThreadMessages.frame: {
+
+                    var frame:GifFrame = Thread.readMessage(true);
+
+                    encoder.add(output, frame);
+
+                    count++;
+
+                    Runner.call_primary(encoding_progress.bind(count));
+
+                } //frame
+
+                case _:
+
+            } //switch(message)
+
+            Sys.sleep(0.0);
+
+        } //while running
+
+    } //encoding_func
+
+    // function saveThreadFunc(path:String):Void {
+
+    //     var t = haxe.Timer.stamp();
+    //     var encoder = new GifEncoder(framerate, repeat, quality, true);
+    //     encoder.startFile(path);
+
+    //     lastSavedFrame = 0;
+    //     encoder.addFrame(savedFrames[0]);
+
+    //     for(i in 1...frameCount) {
+
+    //         if(Thread.readMessage(false) == ThreadMessages.abort) {
+    //                 //:todo: this may not be displayed if no recorder.update is run afterwards.
+    //             #if !no_gif_logging Runner.call_primary(runTrace.bind('Gif recorder / Gif saving was stopped.')); #end
+    //             break;
+    //         }
+
+    //         encoder.addFrame(savedFrames[i]);
+
+    //         lastSavedFrame = i;
+
+    //     } //each frame
+
+    //     encoder.finish();
+    //     state = Paused;
+    //     reset();
+    //     savingTime = haxe.Timer.stamp() - t;
+    //     Runner.call_primary(onEncodingFinished);
+    
+    // } //saveThreadFunc
 
         /** Called at the end of the encoding thread */
-    function onEncodingFinished():Void {
+    function encoding_complete(output:BytesOutput) : Void {
+
+        var bytes = output.getBytes();
+
+        sys.io.File.saveBytes(filePath, bytes);
+
+        output = null;
+        bytes = null;
+
         print('Encoding finished. Time taken was $savingTime seconds');
-    }
+
+        reset();
+
+    } //encoding_complete
+
+        //
+    function encoding_progress(index:Int) {
+
+        Sys.println('encoding progress $index / $added');
+        if(onprogress != null) {
+            onprogress(index/added);
+        }
+
+    } //encoding_progress
+
         /** Used by the background encoding thread to emit traces on the primary thread */
     function runTrace(message:Dynamic):Void{
         trace(message);
@@ -241,4 +362,6 @@ enum RecorderState {
 @:enum
 abstract ThreadMessages(Int){
     var abort = 1;
+    var frame = 2;
+    var commit = 3;
 }
