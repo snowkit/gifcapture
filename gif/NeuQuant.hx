@@ -95,10 +95,8 @@ class NeuQuant {
         lengthcount = len;
         samplefac = sample;
 
-        var p:Int32Array;
         for (i in 0...netsize) {
-            p = network.subarray(i * 4, i * 4 + 4);
-            p[0] = p[1] = p[2] = Std.int((i << (netbiasshift + 8)) / netsize);
+            network[i*4 + 0] = network[i*4 + 1] = network[i*4 + 2] = Std.int((i << (netbiasshift + 8)) / netsize);
             freq[i] = Std.int(intbias / netsize); // 1 / netsize
             bias[i] = 0; // allocated to zero?
         }
@@ -137,8 +135,6 @@ class NeuQuant {
         var j:Int;
         var smallpos:Int;
         var smallval:Int;
-        var p:Int32Array;
-        var q:Int32Array;
         var previouscol:Int;
         var startpos:Int;
 
@@ -147,38 +143,35 @@ class NeuQuant {
 
         for (i in 0...netsize)
         {
-            p = network.subarray(i * 4, i * 4 + 4);
             smallpos = i;
-            smallval = p[1]; // Index on g
+            smallval = network[i*4 + 1]; // Index on g
 
             // Find smallest in i..netsize-1
             for (j in (i + 1)...netsize)
             {
-                q = network.subarray(j * 4, j * 4 + 4);
-                if (q[1] < smallval)
+                if (network[j*4 + 1] < smallval)
                 {
                     smallpos = j;
-                    smallval = q[1]; // Index on g
+                    smallval = network[j*4 + 1]; // Index on g
                 }
             }
 
-            q = network.subarray(smallpos * 4, smallpos * 4 + 4);
 
             // Swap p (i) and q (smallpos) entries
             if (i != smallpos)
             {
-                j = q[0];
-                q[0] = p[0];
-                p[0] = j;
-                j = q[1];
-                q[1] = p[1];
-                p[1] = j;
-                j = q[2];
-                q[2] = p[2];
-                p[2] = j;
-                j = q[3];
-                q[3] = p[3];
-                p[3] = j;
+                j = network[smallpos*4 + 0];
+                network[smallpos*4 + 0] = network[i*4 + 0];
+                network[i*4 + 0] = j;
+                j = network[smallpos*4 + 1];
+                network[smallpos*4 + 1] = network[i*4 + 1];
+                network[i*4 + 1] = j;
+                j = network[smallpos*4 + 2];
+                network[smallpos*4 + 2] = network[i*4 + 2];
+                network[i*4 + 2] = j;
+                j = network[smallpos*4 + 3];
+                network[smallpos*4 + 3] = network[i*4 + 3];
+                network[i*4 + 3] = j;
             }
 
             // Smallval entry is now in position i
@@ -308,7 +301,6 @@ class NeuQuant {
         var dist:Int;
         var a:Int;
         var bestd:Int;
-        var p:Int32Array;
         var best:Int;
 
         bestd = 1000; // Biggest possible dist is 256*3
@@ -320,8 +312,7 @@ class NeuQuant {
         {
             if (i < netsize)
             {
-                p = network.subarray(i * 4, i * 4 + 4);
-                dist = p[1] - g; // Inx key
+                dist = network[i*4 + 1] - g; // Inx key
 
                 if (dist >= bestd)
                 {
@@ -334,7 +325,7 @@ class NeuQuant {
                     if (dist < 0)
                         dist = -dist;
 
-                    a = p[0] - b;
+                    a = network[i*4 + 0] - b;
 
                     if (a < 0)
                         a = -a;
@@ -343,7 +334,7 @@ class NeuQuant {
 
                     if (dist < bestd)
                     {
-                        a = p[2] - r;
+                        a = network[i*4 + 2] - r;
 
                         if (a < 0)
                             a = -a;
@@ -353,7 +344,7 @@ class NeuQuant {
                         if (dist < bestd)
                         {
                             bestd = dist;
-                            best = p[3];
+                            best = network[i*4 + 3];
                         }
                     }
                 }
@@ -361,8 +352,7 @@ class NeuQuant {
 
             if (j >= 0)
             {
-                p = network.subarray(j * 4, j * 4 + 4);
-                dist = g - p[1]; // Inx key - reverse dif
+                dist = g - network[j*4 + 1]; // Inx key - reverse dif
 
                 if (dist >= bestd)
                 {
@@ -375,7 +365,7 @@ class NeuQuant {
                     if (dist < 0)
                         dist = -dist;
 
-                    a = p[0] - b;
+                    a = network[j*4 + 0] - b;
 
                     if (a < 0)
                         a = -a;
@@ -384,7 +374,7 @@ class NeuQuant {
 
                     if (dist < bestd)
                     {
-                        a = p[2] - r;
+                        a = network[j*4 + 2] - r;
 
                         if (a < 0)
                             a = -a;
@@ -394,7 +384,7 @@ class NeuQuant {
                         if (dist < bestd)
                         {
                             bestd = dist;
-                            best = p[3];
+                            best = network[j*4 + 3];
                         }
                     }
                 }
@@ -421,10 +411,10 @@ class NeuQuant {
     {
         for (i in 0...netsize)
         {
-            network[i * 4] >>= netbiasshift;
-            network[i * 4 + 1] >>= netbiasshift;
-            network[i * 4 + 2] >>= netbiasshift;
-            network[i * 4 + 3] = i; // Record colour no
+            network[i*4] >>= netbiasshift;
+            network[i*4 + 1] >>= netbiasshift;
+            network[i*4 + 2] >>= netbiasshift;
+            network[i*4 + 3] = i; // Record colour no
         }
     }
 
@@ -478,10 +468,9 @@ class NeuQuant {
     function altersingle(alpha:Int, i:Int, b:Int, g:Int, r:Int):Void
     {
         /* Alter hit neuron */
-        var n:Int32Array = network.subarray(i * 4, i * 4 + 4);
-        n[0] -= Std.int((alpha * (n[0] - b)) / initalpha);
-        n[1] -= Std.int((alpha * (n[1] - g)) / initalpha);
-        n[2] -= Std.int((alpha * (n[2] - r)) / initalpha);
+        network[i*4 + 0] -= Std.int((alpha * (network[i*4 + 0] - b)) / initalpha);
+        network[i*4 + 1] -= Std.int((alpha * (network[i*4 + 1] - g)) / initalpha);
+        network[i*4 + 2] -= Std.int((alpha * (network[i*4 + 2] - r)) / initalpha);
     }
 
     // Search for biased BGR values
@@ -509,18 +498,18 @@ class NeuQuant {
 
         for (i in 0...netsize)
         {
-            dist = network[i * 4 + 0] - b;
+            dist = network[i*4 + 0] - b;
 
             if (dist < 0)
                 dist = -dist;
 
-            a = network[i * 4 + 1] - g;
+            a = network[i*4 + 1] - g;
 
             if (a < 0)
                 a = -a;
 
             dist += a;
-            a = network[i * 4 + 2] - r;
+            a = network[i*4 + 2] - r;
 
             if (a < 0)
                 a = -a;
