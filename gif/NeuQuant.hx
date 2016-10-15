@@ -37,7 +37,6 @@ class NeuQuant {
     inline static var minpicturebytes : Int = (3 * prime4); // Minimum size for input image
 
     // Network Definitions
-    inline static var maxnetpos       : Int = (netsize - 1);
     inline static var netbiasshift    : Int = 4; // Bias for colour values
     inline static var ncycles         : Int = 100; // No. of learning cycles
 
@@ -71,14 +70,16 @@ class NeuQuant {
 
         // Types and Global Variables
 
-    var thepicture:UInt8Array;      // The input image itself
-    var lengthcount:Int;            // Lengthcount = H*W*3
-    var samplefac:Int;              // Sampling factor 1..30
-    var network:Int32Array;         // The network itself - [netsize][4]
-    var netindex:Int32Array;        // For network lookup - really 256
-    var bias:Int32Array;            // Bias array for learning
-    var freq:Int32Array;            // Frequency array for learning
-    var radpower:Int32Array;        // Radpower for precomputation
+    var thepicture: UInt8Array;     // The input image itself
+    var lengthcount: Int;           // Lengthcount = H*W*3
+    var samplefac: Int;             // Sampling factor 1..30
+    var network: Int32Array;        // The network itself - [netsize][4]
+    var netindex: Int32Array;       // For network lookup - really 256
+    var bias: Int32Array;           // Bias array for learning
+    var freq: Int32Array;           // Frequency array for learning
+    var radpower: Int32Array;       // Radpower for precomputation
+    var colormap_map: UInt8Array;   // Cached color map array
+    var colormap_index: Int32Array; // Cached color map index
 
     public function new()
     {
@@ -87,6 +88,8 @@ class NeuQuant {
         freq = new Int32Array(netsize);
         radpower = new Int32Array(initrad);
         network = new Int32Array(netsize * 4);
+        colormap_map = new UInt8Array(3 * netsize);
+        colormap_index = new Int32Array(netsize);
     }
 
     // Reset network in range (0,0,0) to (255,255,255) and set parameters
@@ -102,16 +105,8 @@ class NeuQuant {
         }
     }
 
-    static var colormap_map : UInt8Array;
-    static var colormap_index : Int32Array;
-
     public function colormap():UInt8Array
     {   
-        if(colormap_map == null) {
-            colormap_map = new UInt8Array(3 * netsize);
-            colormap_index = new Int32Array(netsize);
-        }
-
         for(i in 0...netsize) {
             colormap_index[network[i * 4 + 3]] = i;
         }
@@ -186,6 +181,8 @@ class NeuQuant {
                 startpos = i;
             }
         }
+
+        var maxnetpos = netsize - 1;
 
         netindex[previouscol] = (startpos + maxnetpos) >> 1;
 
