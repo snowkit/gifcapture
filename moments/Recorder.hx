@@ -339,10 +339,7 @@ class Recorder {
         //
     function encoding_progress(index:Int) {
 
-        Sys.println('encoding progress $index / $added');
-        if(onprogress != null) {
-            onprogress(index/added);
-        }
+        if(onprogress != null) onprogress(index/added);
 
     } //encoding_progress
 

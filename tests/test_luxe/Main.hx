@@ -21,8 +21,10 @@ class Main extends luxe.Game {
     }
 
     var progress:Float = 0.0;
+    var progress_view:phoenix.Batcher;
 
     override function ready() {
+
         boxGeom = Luxe.draw.box( {
            w:50,
            h:50,
@@ -41,6 +43,14 @@ class Main extends luxe.Game {
         recorder.onprogress = function(_progress:Float) {
             progress = _progress;
         }
+
+        progress_view = new phoenix.Batcher(Luxe.renderer, 'progress', 64);
+        progress_view = Luxe.renderer.create_batcher({
+            name:'progress_view',
+            no_add: true,
+            camera: new phoenix.Camera({ camera_name : 'progress_view_camera' }),
+            layer: 1000
+        });
 
         Luxe.on(luxe.Ev.tickend, tick_end);
     }
@@ -107,6 +117,26 @@ class Main extends luxe.Game {
 
         } //
 
+        if(progress != 0) {
+
+            var color = new luxe.Color(0, 0.602, 1, 1);
+
+            if(recorder.state != Paused) {
+                color.set(0.968, 0.134, 0.019, 1);
+            }
+
+            Luxe.draw.box({
+                batcher: progress_view,
+                x: 0, y: 0, h: 3,
+                w: Luxe.screen.w * progress,
+                color: color,
+                immediate: true
+            });
+
+            progress_view.draw();
+
+        } //Saving
+
     } //tick_end
 
     override function onrender() {
@@ -117,16 +147,6 @@ class Main extends luxe.Game {
             point_size: 14,
             text: '${Luxe.time}'
         });
-
-        if(progress != 0 && recorder.state != Recording) {
-
-            Luxe.draw.box({
-               x: 0, y: Luxe.screen.h - 12,
-               w: Luxe.screen.w * progress, h: 8,
-               immediate:true
-            });
-
-        } //Saving
 
     }
 
