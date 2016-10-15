@@ -396,13 +396,9 @@ class NeuQuant {
 
     public function process():UInt8Array
     {
-        Timer.start('learn');
         learn();
-        Timer.end('learn');
         unbiasnet();
-        // Timer.start('inxbuild'); ~0.003
         inxbuild();
-        // Timer.end('inxbuild');
         return colormap();
     }
 

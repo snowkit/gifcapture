@@ -3,7 +3,6 @@ package moments;
 import gif.GifEncoder;
 import phoenix.RenderTexture;
 import haxe.io.UInt8Array;
-import snow.modules.opengl.GL;
 import moments.Runner;
 
 #if cpp
