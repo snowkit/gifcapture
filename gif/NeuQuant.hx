@@ -398,9 +398,13 @@ class NeuQuant {
 
     public function process():UInt8Array
     {
+        Timer.start('learn');
         learn();
+        Timer.end('learn');
         unbiasnet();
+        // Timer.start('inxbuild'); ~0.003
         inxbuild();
+        // Timer.end('inxbuild');
         return colormap();
     }
 
@@ -426,8 +430,6 @@ class NeuQuant {
         var a:Int;
         var m:Int;
 
-        var p:Int32Array;
-
         lo = i - rad;
 
         if (lo < -1)
@@ -448,20 +450,18 @@ class NeuQuant {
 
             if (j < hi)
             {
-                p = network.subarray(j * 4, j * 4 + 4);
                 j++;
-                p[0] -= Std.int((a * (p[0] - b)) / alpharadbias);
-                p[1] -= Std.int((a * (p[1] - g)) / alpharadbias);
-                p[2] -= Std.int((a * (p[2] - r)) / alpharadbias);
+                network[j * 4 + 0] -= Std.int((a * (network[j * 4 + 0] - b)) / alpharadbias);
+                network[j * 4 + 1] -= Std.int((a * (network[j * 4 + 1] - g)) / alpharadbias);
+                network[j * 4 + 2] -= Std.int((a * (network[j * 4 + 2] - r)) / alpharadbias);
             }
 
             if (k > lo)
             {
-                p = network.subarray(k * 4, k * 4 + 4);
                 k--;
-                p[0] -= Std.int((a * (p[0] - b)) / alpharadbias);
-                p[1] -= Std.int((a * (p[1] - g)) / alpharadbias);
-                p[2] -= Std.int((a * (p[2] - r)) / alpharadbias);
+                network[k * 4 + 0] -= Std.int((a * (network[k * 4 + 0] - b)) / alpharadbias);
+                network[k * 4 + 1] -= Std.int((a * (network[k * 4 + 1] - g)) / alpharadbias);
+                network[k * 4 + 2] -= Std.int((a * (network[k * 4 + 2] - r)) / alpharadbias);
             }
         }
     }
@@ -493,7 +493,6 @@ class NeuQuant {
         var bestbiaspos:Int;
         var bestd:Int;
         var bestbiasd:Int;
-        var n:Int32Array;
 
         bestd = ~(1 << 31);
         bestbiasd = bestd;
@@ -502,19 +501,18 @@ class NeuQuant {
 
         for (i in 0...netsize)
         {
-            n = network.subarray(i * 4, i * 4 + 4);
-            dist = n[0] - b;
+            dist = network[i * 4 + 0] - b;
 
             if (dist < 0)
                 dist = -dist;
 
-            a = n[1] - g;
+            a = network[i * 4 + 1] - g;
 
             if (a < 0)
                 a = -a;
 
             dist += a;
-            a = n[2] - r;
+            a = network[i * 4 + 2] - r;
 
             if (a < 0)
                 a = -a;

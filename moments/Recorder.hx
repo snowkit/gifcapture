@@ -173,7 +173,7 @@ class Recorder {
                     //we're encoding in a background thread and need it to stick around
                 frame.data = new UInt8Array(frameWidth * frameHeight * 3);
                 frame.data.view.buffer.blit(0, rgb_pixels.view.buffer, 0, frame.data.length);
-                frame.delay = frame_delta;
+                frame.delay = Math.max(frame_delta, minTimePerFrame);
 
             timeSinceLastSave = haxe.Timer.stamp();
             frameCount++;

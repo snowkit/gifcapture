@@ -56,6 +56,8 @@ class GifEncoder {
             If the frame is expected to be flipped during encoding for alternative coordinate systems */
     public function new(_repeat:Int = -1, _quality:Int = 10, _flippedY:Bool = false)
     {
+        Timer.init();
+
         repeat = _repeat;
 
         sampleInterval = Std.int(clamp(_quality, 1, 100));
@@ -230,7 +232,11 @@ class GifEncoder {
     function analyzepixels():Void
     {
         nq.reset(pixels, pixels.length, sampleInterval);
+        Timer.start('nq.process');
         colorTab = nq.process(); // Create reduced palette
+        Timer.end('nq.process');
+
+        // Timer.start('analyse loop'); -- ~0.06
 
         // Map image pixels to new palette
         var k:Int = 0;
@@ -242,6 +248,7 @@ class GifEncoder {
         }
         colorDepth = 8;
         paletteSize = 7;
+        // Timer.end('analyse loop');
     }
 
 //Stream Encoding
