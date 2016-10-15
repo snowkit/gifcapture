@@ -25,58 +25,60 @@ import haxe.io.Int32Array;
 import haxe.io.UInt8Array;
 
 class NeuQuant {
-	static var netsize(default, never):Int = 256; // Number of colours used
+
+    inline static var netsize         : Int = 256; // Number of colours used
 
     // Four primes near 500 - assume no image has a length so large that it is divisible by all four primes
-    static var prime1(default, never):Int = 499;
-    static var prime2(default, never):Int = 491;
-    static var prime3(default, never):Int = 487;
-    static var prime4(default, never):Int = 503;
+    inline static var prime1          : Int = 499;
+    inline static var prime2          : Int = 491;
+    inline static var prime3          : Int = 487;
+    inline static var prime4          : Int = 503;
 
-    static var minpicturebytes(default, never):Int = (3 * prime4); // Minimum size for input image
+    inline static var minpicturebytes : Int = (3 * prime4); // Minimum size for input image
 
     // Network Definitions
-    static var maxnetpos(default, never):Int = (netsize - 1);
-    static var netbiasshift(default, never):Int = 4; // Bias for colour values
-    static var ncycles(default, never):Int = 100; // No. of learning cycles
+    inline static var maxnetpos       : Int = (netsize - 1);
+    inline static var netbiasshift    : Int = 4; // Bias for colour values
+    inline static var ncycles         : Int = 100; // No. of learning cycles
 
     // Defs for freq and bias
-    static var intbiasshift(default, never):Int = 16; // Bias for fractions
-    static var intbias(default, never):Int = (1 << intbiasshift);
-    static var gammashift(default, never):Int = 10; // Gamma = 1024
-    static var gamma(default, never):Int = (1 << gammashift);
-    static var betashift(default, never):Int = 10;
-    static var beta(default, never):Int = (intbias >> betashift); // Beta = 1/1024
-    static var betagamma(default, never):Int = (intbias << (gammashift - betashift));
+    inline static var intbiasshift    : Int = 16; // Bias for fractions
+    inline static var intbias         : Int = (1 << intbiasshift);
+    inline static var gammashift      : Int = 10; // Gamma = 1024
+    inline static var gamma           : Int = (1 << gammashift);
+    inline static var betashift       : Int = 10;
+    inline static var beta            : Int = (intbias >> betashift); // Beta = 1/1024
+    inline static var betagamma       : Int = (intbias << (gammashift - betashift));
 
     // Defs for decreasing radius factor
-    static var initrad(default, never):Int = (netsize >> 3); // For 256 cols, radius starts
-    static var radiusbiasshift(default, never):Int = 6; // At 32.0 biased by 6 bits
-    static var radiusbias(default, never):Int = (1 << radiusbiasshift);
-    static var initradius(default, never):Int = (initrad * radiusbias); // And decreases by a
-    static var radiusdec(default, never):Int = 30; // Factor of 1/30 each cycle
+    inline static var initrad         : Int = (netsize >> 3); // For 256 cols, radius starts
+    inline static var radiusbiasshift : Int = 6; // At 32.0 biased by 6 bits
+    inline static var radiusbias      : Int = (1 << radiusbiasshift);
+    inline static var initradius      : Int = (initrad * radiusbias); // And decreases by a
+    inline static var radiusdec       : Int = 30; // Factor of 1/30 each cycle
 
     // Defs for decreasing alpha factor
-    static var alphabiasshift(default, never):Int = 10; /* alpha starts at 1.0 */
-    static var initalpha(default, never):Int = (1 << alphabiasshift);
+    inline static var alphabiasshift  : Int = 10; /* alpha starts at 1.0 */
+    inline static var initalpha       : Int = (1 << alphabiasshift);
+
+    // Radbias and alpharadbias used for radpower calculation
+    inline static var radbiasshift    : Int = 8;
+    inline static var radbias         : Int = (1 << radbiasshift);
+    inline static var alpharadbshift  : Int = (alphabiasshift + radbiasshift);
+    inline static var alpharadbias    : Int = (1 << alpharadbshift);
 
     var alphadec:Int; // Biased by 10 bits
 
-    // Radbias and alpharadbias used for radpower calculation
-    static var radbiasshift(default, never):Int = 8;
-    static var radbias(default, never):Int = (1 << radbiasshift);
-    static var alpharadbshift(default, never):Int = (alphabiasshift + radbiasshift);
-    static var alpharadbias(default, never):Int = (1 << alpharadbshift);
+        // Types and Global Variables
 
-    // Types and Global Variables
-    var thepicture:UInt8Array; // The input image itself
-    var lengthcount:Int; // Lengthcount = H*W*3
-    var samplefac:Int; // Sampling factor 1..30
-    var network:Int32Array; // The network itself - [netsize][4]
-    var netindex:Int32Array; // For network lookup - really 256
-    var bias:Int32Array; // Bias and freq arrays for learning
-    var freq:Int32Array;
-    var radpower:Int32Array; // Radpower for precomputation
+    var thepicture:UInt8Array;      // The input image itself
+    var lengthcount:Int;            // Lengthcount = H*W*3
+    var samplefac:Int;              // Sampling factor 1..30
+    var network:Int32Array;         // The network itself - [netsize][4]
+    var netindex:Int32Array;        // For network lookup - really 256
+    var bias:Int32Array;            // Bias array for learning
+    var freq:Int32Array;            // Frequency array for learning
+    var radpower:Int32Array;        // Radpower for precomputation
 
     public function new()
     {
@@ -102,24 +104,30 @@ class NeuQuant {
         }
     }
 
-    public function colormap():UInt8Array
-    {
-        var map = new UInt8Array(3 * netsize);
-        var index = new Int32Array(netsize);
+    static var colormap_map : UInt8Array;
+    static var colormap_index : Int32Array;
 
-        for (i in 0...netsize)
-            index[network[i * 4 + 3]] = i;
+    public function colormap():UInt8Array
+    {   
+        if(colormap_map == null) {
+            colormap_map = new UInt8Array(3 * netsize);
+            colormap_index = new Int32Array(netsize);
+        }
+
+        for(i in 0...netsize) {
+            colormap_index[network[i * 4 + 3]] = i;
+        }
 
         var k:Int = 0;
         for (i in 0...netsize)
         {
-            var j = index[i];
-            map[k++] = network[j * 4];
-            map[k++] = network[j * 4 + 1];
-            map[k++] = network[j * 4 + 2];
+            var j = colormap_index[i];
+            colormap_map[k++] = network[j * 4];
+            colormap_map[k++] = network[j * 4 + 1];
+            colormap_map[k++] = network[j * 4 + 2];
         }
 
-        return map;
+        return colormap_map;
     }
 
     // Insertion sort of network and building of netindex[0..255] (to do after unbias)
