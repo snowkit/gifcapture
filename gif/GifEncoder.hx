@@ -17,8 +17,8 @@ class GifEncoder {
 
     var width:Int;
     var height:Int;
+    var framerate:Int = 24;                 // used if frame.delay < 0
     var repeat:Int = -1;                    // -1: no repeat, 0: infinite, >0: repeat count
-    var frameDelay:Int = 0;                 // Frame delay (milliseconds)
     var hasStarted:Bool = false;            // Ready to output frames
     var fileStream:FileOutput;
 
@@ -43,6 +43,9 @@ class GifEncoder {
 
     /** Construct a gif encoder with options:
 
+        framerate:
+            Default is 24, this is only used if an added frame has a delay that is negative.
+
         repeat:
             Default is -1 (no repeat); 0 means play indefinitely.
 
@@ -54,9 +57,10 @@ class GifEncoder {
 
         flippedY:
             If the frame is expected to be flipped during encoding for alternative coordinate systems */
-    public function new(_repeat:Int = -1, _quality:Int = 10, _flippedY:Bool = false)
+    public function new(_framerate:Int = 24, _repeat:Int = -1, _quality:Int = 10, _flippedY:Bool = false)
     {
         repeat = _repeat;
+        framerate = _framerate;
 
         sampleInterval = Std.int(clamp(_quality, 1, 100));
         usedEntry = [for (i in 0...256) false];
@@ -66,28 +70,10 @@ class GifEncoder {
         lzwEncoder = new LzwEncoder();
     }
 
-    /** Sets the delay time between each frame,
-        or changes it for subsequent frames.
-        Applies to the last frame added.
-        Time in microseconds. */
-    public function setDelay(microseconds:Int):Void
-    {
-        frameDelay = Math.round(microseconds / 10);
-    }
-
-    /** Sets frame rate in frames per second.
-        Equivalent to setDelay(1000/fps)
-        Applies to the last frame added. */
-    public function setFramerate(fps:Float):Void
-    {
-        if (fps > 0) {
-            frameDelay = Math.round(100 / fps);
-        }
-    }
-
     /** Adds next GIF frame. The frame is not written immediately, but is actually deferred
         until the next frame is received so that timing data can be inserted. Invoking
         Finish() flushes all frames. */
+    var last_delay:Float = 0.0;
     public function addFrame(frame:GifFrame):Void
     {
         if (!hasStarted)
@@ -116,7 +102,14 @@ class GifEncoder {
             }
         }
 
-        writeGraphicCtrlExt();
+        writeGraphicCtrlExt(last_delay);
+
+        if(frame.delay < 0) {
+            last_delay = 1.0/framerate;            
+        } else {
+            last_delay = frame.delay;
+        }
+
         writeImageDesc();
 
         if (!isFirstFrame)
@@ -214,17 +207,18 @@ class GifEncoder {
 
     /** Get the current frame pixel data, will be flipped if the flag is enabled */
     function getImagepixels():Void {
+        
         if (!flippedY) {
             pixels = currentFrame.data;
-        }
-        else {
+        } else {
             var stride = currentFrame.width * 3;
             for(y in 0...currentFrame.height) {
                 var begin = (currentFrame.height - 1 - y) * stride;
                 pixels.view.buffer.blit(y * stride, currentFrame.data.view.buffer, begin, stride);
             }
         }
-    }
+
+    } //
 
     /** Analyzes image colors and creates color map. */
     function analyzepixels():Void
@@ -240,7 +234,7 @@ class GifEncoder {
             usedEntry[index] = true;
             indexedPixels[i] = index;
         }
-        
+
         colorDepth = 8;
         paletteSize = 7;
 
@@ -248,8 +242,8 @@ class GifEncoder {
 
 //Stream Encoding
 
-    /** Writes Graphic Control Extension. */
-    function writeGraphicCtrlExt():Void
+    /** Writes Graphic Control Extension. Delay is in seconds, floored and converted to 1/100 of a second */
+    function writeGraphicCtrlExt(delay:Float):Void
     {
         fileStream.writeByte(0x21);         // Extension introducer
         fileStream.writeByte(0xf9);         // GCE label
@@ -261,9 +255,10 @@ class GifEncoder {
                              0 |            // 7   user input - 0 = none
                              0 );           // 8   transparency flag
 
-        fileStream.writeInt16(frameDelay);  // Delay x 1/100 sec
-        fileStream.writeByte(0);            // Transparent color index
-        fileStream.writeByte(0);            // Block terminator
+
+        fileStream.writeInt16(Math.round(delay * 100)); // Delay x 1/100 sec
+        fileStream.writeByte(0);                        // Transparent color index
+        fileStream.writeByte(0);                        // Block terminator
     }
 
     /** Writes Image Descriptor. */
@@ -353,8 +348,10 @@ typedef GifFrame = {
     var width:Int;
         /** Height of the frame */
     var height:Int;
-        /** Delay of the frame in seconds.
-            This value gets floored when encoded due to gif limitations */
+        /** Delay of the frame in seconds. This value gets floored
+            when encoded due to gif format requirements. If this value is negative,
+            the default encoder frame rate will be used.
+            */
     var delay:Float;
         /** Pixels data in unsigned bytes, rgb format */
     var data:UInt8Array;

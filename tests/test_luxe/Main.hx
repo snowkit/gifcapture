@@ -46,7 +46,7 @@ class Main extends luxe.Game {
            y:100
         });        
 
-        recorder = new Recorder(Std.int(Luxe.screen.w), Std.int(Luxe.screen.h), 60, 10, GifQuality.Worst, GifRepeat.Infinite);
+        recorder = new Recorder(Std.int(Luxe.screen.w), Std.int(Luxe.screen.h), 50, 5, GifQuality.Worst, GifRepeat.Infinite);
 
         Luxe.on(luxe.Ev.tickend, tick_end);
     }
@@ -97,14 +97,26 @@ class Main extends luxe.Game {
         GL.readPixels(0, 0, Luxe.screen.w, Luxe.screen.h, GL.RGB, GL.UNSIGNED_BYTE, frame_data);
 
         var frame_in = haxe.io.UInt8Array.fromBytes(frame_data.toBytes());
-        recorder.onFrameRendered(frame_in, frame_delta);
+        recorder.onFrameRendered(frame_in, 1/50);
 
         frame_data = null;
         frame_in = null;
 
     } //tick_end
 
+    override function onrender() {
+
+        Luxe.draw.text({
+            immediate: true,
+            pos: new luxe.Vector(10, 10),
+            point_size: 14,
+            text: '${Luxe.time}'
+        });
+
+    }
+
     override function update(dt:Float) {
+
         recorder.update();
         if (recorder.state == RecorderState.Saving) {
             Luxe.draw.box( {

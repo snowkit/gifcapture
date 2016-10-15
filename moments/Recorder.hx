@@ -17,12 +17,11 @@ class Recorder {
         /** Total number of frames recorded */
     public var frameCount(default, null):Int = 0;
 
-        /** Minimum time the recorder waits to record another frame */
-    var minTimePerFrame:Float;
-
         /** Maximum number of frames that can be recorded. Inteded to limit memory consumption. */
     var maxFrames:Int;
 
+        /** framerate */
+    var framerate:Int;
         /** Width of the gif */
     var frameWidth:Int;
         /** Height of the gif */
@@ -57,7 +56,7 @@ class Recorder {
     public function new(_frameWidth:Int, _frameHeight:Int, _maxFps:Int, _maxTime:Float, _quality:Int = 10, _repeat:Int = -1) {
         frameWidth = _frameWidth;
         frameHeight = _frameHeight;
-        minTimePerFrame = 1 / _maxFps;
+        framerate = _maxFps;
         maxFrames = Math.ceil(_maxTime * _maxFps);
         quality = _quality;
         repeat = _repeat;
@@ -151,17 +150,16 @@ class Recorder {
 
         if(state != Recording) return;
 
-        if((haxe.Timer.stamp() - timeSinceLastSave) >= minTimePerFrame) {
+        var frame_time = 1.0/framerate;
+
+        if((haxe.Timer.stamp() - timeSinceLastSave) >= frame_time) {
 
                 //We only push frames if we need them, because
                 //if we call repeatedly we don't have to reallocate the data
             if(savedFrames.length == frameCount) {                
 
                 savedFrames.push({
-                    width: frameWidth,
-                    height: frameHeight,
-                    delay: frame_delta,
-                    data: null
+                    width: frameWidth, height: frameHeight, delay: 0, data: null
                 });
 
             } // if last frame
@@ -172,7 +170,7 @@ class Recorder {
                     //we're encoding in a background thread and need it to stick around
                 frame.data = new UInt8Array(frameWidth * frameHeight * 3);
                 frame.data.view.buffer.blit(0, rgb_pixels.view.buffer, 0, frame.data.length);
-                frame.delay = Math.max(frame_delta, minTimePerFrame);
+                frame.delay = frame_delta;
 
             timeSinceLastSave = haxe.Timer.stamp();
             frameCount++;
@@ -195,11 +193,10 @@ class Recorder {
     function saveThreadFunc(path:String):Void {
 
         var t = haxe.Timer.stamp();
-        var encoder = new GifEncoder(repeat, quality, true);
+        var encoder = new GifEncoder(framerate, repeat, quality, true);
         encoder.startFile(path);
 
         lastSavedFrame = 0;
-        encoder.setDelay(Math.floor(1000 * minTimePerFrame));
         encoder.addFrame(savedFrames[0]);
 
         for(i in 1...frameCount) {
@@ -210,10 +207,7 @@ class Recorder {
                 break;
             }
 
-            var frame = savedFrames[i];
-
-            encoder.setDelay(Math.floor(1000 * frame.delay));
-            encoder.addFrame(frame);
+            encoder.addFrame(savedFrames[i]);
 
             lastSavedFrame = i;
 
