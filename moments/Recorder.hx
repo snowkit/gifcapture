@@ -283,7 +283,7 @@ class Recorder {
 
             } //switch(message)
 
-            Sys.sleep(0.0);
+            // Sys.sleep(0.0);
 
         } //while running
 
