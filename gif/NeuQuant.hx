@@ -466,7 +466,15 @@ class NeuQuant {
         network[i*4 + 2] -= Std.int((alpha * (network[i*4 + 2] - r)) / initalpha);
     }
 
+    inline function make_abs(value:Int) : Int {
+        var tmp = value >> 31;
+        value ^= tmp;
+        value += tmp & 1;
+        return value;
+    }
+
     // Search for biased BGR values
+    static inline var bestd_init = ~(1 << 31);
     function contest(b:Int, g:Int, r:Int):Int
     {
         // Finds closest neuron (min dist) and updates freq
@@ -484,30 +492,27 @@ class NeuQuant {
         var bestd:Int;
         var bestbiasd:Int;
 
-        bestd = ~(1 << 31);
+        bestd = bestd_init;
         bestbiasd = bestd;
         bestpos = -1;
         bestbiaspos = bestpos;
 
         for (i in 0...netsize)
         {
-            dist = network[i*4 + 0] - b;
+            var i_n = i * 4;
+            var b_i = i_n + 0;
+            var g_i = i_n + 1;
+            var r_i = i_n + 2;
 
-            if (dist < 0)
-                dist = -dist;
+            var b_a = network[b_i];
+            var g_a = network[g_i];
+            var r_a = network[r_i];
 
-            a = network[i*4 + 1] - g;
+            b_a = make_abs(b_a - b);
+            g_a = make_abs(g_a - g);
+            r_a = make_abs(r_a - r);
 
-            if (a < 0)
-                a = -a;
-
-            dist += a;
-            a = network[i*4 + 2] - r;
-
-            if (a < 0)
-                a = -a;
-
-            dist += a;
+            dist = b_a + g_a + r_a;
 
             if (dist < bestd)
             {
