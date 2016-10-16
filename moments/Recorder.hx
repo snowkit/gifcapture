@@ -113,8 +113,8 @@ class Recorder {
 
     public function record() {
         
-        if (state == Saving) {
-            print("Can't start recording while the recorder is saving!");
+        if (state == Saving || state == Maxed) {
+            print("Can't start recording while the recorder is saving or maxed out!");
             return;
         }
 
@@ -185,7 +185,8 @@ class Recorder {
         frame = null;
 
         if(added == maxFrames) {
-            state = Paused;
+            state = Maxed;
+            print('Max frames reached');
         }
 
     } //add_frame
@@ -353,6 +354,7 @@ class Recorder {
 enum RecorderState {
     Recording;
     Paused;
+    Maxed;
     Saving;
 }
 

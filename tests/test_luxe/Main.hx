@@ -8,15 +8,16 @@ import snow.modules.opengl.GL;
 import snow.api.buffers.*;
 
 import moments.Recorder;
-
+import snow.modules.opengl.GL;
 
 class Main extends luxe.Game {
     var boxGeom:QuadGeometry;
     var recorder:Recorder;
+    var dest: phoenix.RenderTexture;
 
     override function config(config:luxe.GameConfig) {
-        config.window.width = 480;
-        config.window.height = 320;
+        config.window.width = 960;
+        config.window.height = 640;
         return config;
     }
 
@@ -30,14 +31,18 @@ class Main extends luxe.Game {
            h:50,
            x:100,
            y:100
-        });        
+        });
+
+        dest = new phoenix.RenderTexture({
+            id: 'gif_dest',
+            width: Std.int(Luxe.screen.w/4),
+            height: Std.int(Luxe.screen.h/4),
+        });
 
         recorder = new Recorder(
-            Std.int(Luxe.screen.w), 
-            Std.int(Luxe.screen.h), 
-            fps, 
-            5, //max time
-            GifQuality.Worst, 
+            dest.width, dest.height, 
+            fps, 5, //max time
+            GifQuality.Worst,
             GifRepeat.Infinite);
 
         recorder.onprogress = function(_progress:Float) {
@@ -72,10 +77,12 @@ class Main extends luxe.Game {
                 if (recorder.state == RecorderState.Paused) {
                     trace('turn on recording');
                     recorder.record();
+                    cpp.vm.Gc.enable(false);
                 }
                 else if (recorder.state == RecorderState.Recording) {
                     trace('pause recording');
                     recorder.pause();
+                    cpp.vm.Gc.enable(true);
                 }
             case Key.key_r:
                 trace('reset recorder');
@@ -97,32 +104,64 @@ class Main extends luxe.Game {
 
     function tick_end(_) {
 
-        var frame_delta = Luxe.time - last_tick;
-        last_tick = Luxe.time;        
+        if(recorder.state == Recording) {
 
-        accum += frame_delta;
+            var frame_delta = Luxe.time - last_tick;
+            last_tick = Luxe.time;
 
-        if(accum >= mspf) {
+            accum += frame_delta;
 
-            var frame_data = new snow.api.buffers.Uint8Array(Luxe.screen.w * Luxe.screen.h * 3);
-            GL.readPixels(0, 0, Luxe.screen.w, Luxe.screen.h, GL.RGB, GL.UNSIGNED_BYTE, frame_data);
+            if(accum >= mspf) {
 
-            var frame_in = haxe.io.UInt8Array.fromBytes(frame_data.toBytes());
-            recorder.add_frame(frame_in, mspf);
+                    //copy the current frame buffer to the texture framebuffer,
+                    //first we only bind the write portion to the dest
+                GL.bindFramebuffer(opengl.GL.GL_DRAW_FRAMEBUFFER, dest.fbo);
+                
+                    opengl.GL.glBlitFramebuffer(
+                        0, 0, Luxe.screen.w, Luxe.screen.h, //src
+                        0, 0, dest.width, dest.height, //dest
+                        GL.COLOR_BUFFER_BIT,
+                        GL.LINEAR
+                    );            
 
-            frame_data = null;
-            frame_in = null;
+                    //now we need to read from it
+                GL.bindFramebuffer(opengl.GL.GL_READ_FRAMEBUFFER, dest.fbo);
 
-            accum -= mspf;
+                    //get the pixels data back
+                var frame_data = new snow.api.buffers.Uint8Array(dest.width * dest.height * 3);
 
-        } //
+                GL.readPixels(0, 0, dest.width, dest.height, GL.RGB, GL.UNSIGNED_BYTE, frame_data);
+
+                    //reset the frame buffer state
+                GL.bindFramebuffer(GL.FRAMEBUFFER, Luxe.renderer.state.current_fbo);
+
+                var frame_bytes = frame_data.toBytes();
+                var frame_in = haxe.io.UInt8Array.fromBytes(frame_bytes);
+                
+                recorder.add_frame(frame_in, mspf);
+
+                frame_data = null;
+                frame_in = null;
+
+                accum -= mspf;
+
+            } //
+
+        } //Recording
 
         if(progress != 0) {
 
             var color = new luxe.Color(0, 0.602, 1, 1);
 
-            if(recorder.state != Paused) {
-                color.set(0.968, 0.134, 0.019, 1);
+            switch(recorder.state) {
+                case Recording:
+                    color.set(0.968, 0.134, 0.019, 1);
+                case Paused:
+                    color.set(0.75, 0.75, 0.8, 1);
+                case Maxed:
+                    color.set(1, 0.493, 0.061, 1);
+                case Saving:
+                    //... not used currently
             }
 
             Luxe.draw.box({
