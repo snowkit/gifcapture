@@ -333,7 +333,6 @@ class GifEncoder {
 
         started = false;
         first_frame = true;
-        last_delay = 0.0;
 
     } //commit
 
@@ -373,8 +372,6 @@ class GifEncoder {
 
     } //analyze
 
-    var last_delay:Float = 0.0;
-
     public function add(output:BytesOutput, frame:GifFrame):Void {
 
         if(!started) throw "gif: call start() before adding frames.";
@@ -394,14 +391,13 @@ class GifEncoder {
 
         } //first_frame
 
-        write_GraphicControlExt(output, last_delay);
-
-        if(frame.delay < 0) {
-            last_delay = 1.0/framerate;
+        var delay = if(frame.delay < 0) {
+            1.0/framerate;
         } else {
-            last_delay = frame.delay;
+            frame.delay;
         }
 
+        write_GraphicControlExt(output, delay);
         write_image_desc(output, first_frame);
 
         if(!first_frame) {
