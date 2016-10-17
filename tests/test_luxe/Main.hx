@@ -151,7 +151,7 @@ class Main extends luxe.Game {
                 var frame_bytes = frame_data.toBytes();
                 var frame_in = haxe.io.UInt8Array.fromBytes(frame_bytes);
                 
-                recorder.add_frame(frame_in, mspf);
+                recorder.add_frame(frame_in, mspf, true);
 
                 frame_data = null;
                 frame_in = null;
