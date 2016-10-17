@@ -40,8 +40,6 @@ class Recorder {
             /** Height of the gif */
         var frame_height:Int;
 
-            /** The actual gif encoder used in the background thread to save the gif. */
-        var encoder:GifEncoder;
             /** The quality of the gif encoding. From 1 to 100, 1 being best quality but slowest processing, 100 being worst but fastest. */
         var quality:Int;
             /** How many times to repeat the gif. 
