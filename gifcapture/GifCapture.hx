@@ -75,7 +75,7 @@ class GifCapture {
         frame_width = _frame_width;
         frame_height = _frame_height;
         frame_rate = _frame_rate;
-        max_frames = Math.ceil(_max_time * _frame_rate) + 1;
+        max_frames = Math.ceil(_max_time * _frame_rate);
         quality = _quality;
         repeat = _repeat;
 
