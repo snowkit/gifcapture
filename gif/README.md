@@ -1,1 +1,0 @@
-from http://github.com/snowkit/gif

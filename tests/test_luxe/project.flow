@@ -1,18 +1,19 @@
 {
   project : {
-    name : 'moments_test',
+    name : 'gifcapture_test',
     version : '1.0.0',
-    author : 'Keymaster',
+    author : 'snowkit',
 
     app : {
-      name : 'momentsEncoder',
-      package : 'com.luxeengine.moments_test',
+      name : 'gifcapture_test',
+      package : 'com.luxeengine.gifcapture_test',
     },
 
     build : {
       flags: ['-dce no'],
       dependencies : {
         luxe : '*',
+        gif : '*',
         linc_dialogs : '*',
         moments : '*',
       }

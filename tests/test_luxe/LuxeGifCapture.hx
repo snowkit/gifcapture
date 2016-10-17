@@ -1,21 +1,22 @@
 import dialogs.Dialogs;
 import luxe.Color;
-import moments.Recorder;
 import phoenix.Batcher;
 import phoenix.RenderTexture;
 import snow.modules.opengl.GL;
+import gifcapture.GifCapture;
 
 typedef GifQuality = gif.GifEncoder.GifQuality;
 typedef GifRepeat = gif.GifEncoder.GifRepeat;
-typedef RecorderState = moments.Recorder.RecorderState;
+typedef CaptureState = gifcapture.GifCapture.CaptureState;
 
-class LuxeMoments {
+class LuxeGifCapture {
 
     //public 
 
         public var fps (default, set): Int = 30;
-        public var state (get, never): RecorderState;
+        public var state (get, never): CaptureState;
         public var force_default_fbo: Bool = true;
+        public var filter: Int = GL.LINEAR;
 
         public var color_busy: Color;
         public var color_paused: Color;
@@ -23,7 +24,7 @@ class LuxeMoments {
 
     //internal
 
-        var recorder: Recorder;
+        var recorder: GifCapture;
         var dest: RenderTexture;
         var progress_view: Batcher;
 
@@ -53,7 +54,7 @@ class LuxeMoments {
             height: _height,
         });
 
-        recorder = new Recorder(
+        recorder = new GifCapture(
             _width, 
             _height, 
             _fps, 
@@ -142,7 +143,7 @@ class LuxeMoments {
                     0, 0, Luxe.screen.w, Luxe.screen.h, //src
                     0, 0, dest.width, dest.height, //dest
                     GL.COLOR_BUFFER_BIT,
-                    GL.LINEAR
+                    filter
                 );            
 
                 //now we need to read from it

@@ -1,12 +1,12 @@
 
 import luxe.Input;
 import phoenix.geometry.QuadGeometry;
-import LuxeMoments;
+import LuxeGifCapture;
 
 class Main extends luxe.Game {
 
-    var boxGeom:QuadGeometry;
-    var momenter: LuxeMoments;
+    var boxGeom: QuadGeometry;
+    var capture: LuxeGifCapture;
 
     override function ready() {
 
@@ -17,7 +17,7 @@ class Main extends luxe.Game {
            y:100
         });
 
-        momenter = new LuxeMoments(
+        capture = new LuxeGifCapture(
             Std.int(Luxe.screen.w/4),
             Std.int(Luxe.screen.h/4),
             50, 5,
@@ -29,8 +29,8 @@ class Main extends luxe.Game {
 
     override function ondestroy() {
 
-        momenter.destroy();
-        momenter = null;
+        capture.destroy();
+        capture = null;
 
     } //ondestroy
 
@@ -48,21 +48,21 @@ class Main extends luxe.Game {
 
             case Key.space:
 
-                if(momenter.state == RecorderState.Paused) {
-                    momenter.record();
+                if(capture.state == CaptureState.Paused) {
+                    capture.record();
                     trace('recording: active');
-                } else if(momenter.state == RecorderState.Recording) {
-                    momenter.pause();
+                } else if(capture.state == CaptureState.Recording) {
+                    capture.pause();
                     trace('recording: paused');
                 }
 
             case Key.key_r:
-                momenter.reset();
+                capture.reset();
                 trace('recording: reset');
 
             case Key.key_3:
                 trace('recording: committed');
-                momenter.commit();
+                capture.commit();
 
         } //switch
 
