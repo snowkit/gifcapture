@@ -68,7 +68,7 @@ class Recorder {
             _frame_width:Int,
             _frame_height:Int,
             _frame_rate:Int,
-            _max_time:Int,
+            _max_time:Float,
             _quality:Int = 10,
             _repeat:Int = -1
     ) {

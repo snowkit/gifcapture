@@ -85,7 +85,7 @@ class GifEncoder {
         _frame_width:Int,
         _frame_height:Int,
         _framerate:Int,
-        _repeat:GifRepeat = GifRepeat.Infinite,
+        _repeat:Int = GifRepeat.Infinite,
         _quality:Int = 10
     ) {
 
