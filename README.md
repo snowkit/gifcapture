@@ -44,3 +44,7 @@ Add frames, with the haxe.io.UInt8Array of bytes, the delay time for the frame t
 ```haxe
 recorder.add_frame(frame_bytes, frame_delay, flippedY);
 ```
+
+### Example
+
+See [luxe-gifcapture](https://github.com/underscorediscovery/luxe-gifcapture) `tests/test_luxe/`
