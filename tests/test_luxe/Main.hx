@@ -75,7 +75,8 @@ class Main extends luxe.Game {
         });
 
         Luxe.on(luxe.Ev.tickend, tick_end);
-    }
+
+    } //ready
 
     override function onkeyup(e:KeyEvent) {
 	    if (e.keycode == Key.escape) {

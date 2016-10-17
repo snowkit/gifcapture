@@ -113,7 +113,10 @@ class GifEncoder {
 
     public function start(output:BytesOutput) {
 
-        if(output == null) throw "gif: output must be not null.";
+        if(output == null) {
+            Sys.println("gif: start() output must not be null.");
+            return;
+        }
 
         output.writeString("GIF89a");
 
@@ -125,7 +128,15 @@ class GifEncoder {
 
     public function add(output:BytesOutput, frame:GifFrame):Void {
 
-        if(!started) throw "gif: call start() before adding frames.";
+        if(output == null) {
+            Sys.println("gif: add() output must not be null.");
+            return;
+        }
+
+        if(!started) {
+            Sys.println("gif: add() requires start to be called before adding frames.");
+            return;
+        }
 
         var pixels = get_pixels(frame);
         analyze(pixels);
@@ -161,8 +172,15 @@ class GifEncoder {
 
     public function commit(output:BytesOutput) {
 
-        if(output == null) throw "gif: output must be not null.";
-        if(!started) throw "gif: commit() called without start() being called first.";
+        if(output == null) {
+            Sys.println("gif: commit() output must be not null.");
+            return;
+        }
+
+        if(!started) {
+            Sys.println("gif: commit() called without start() being called first.");
+            return;
+        }
 
         output.writeByte(0x3b); // Gif trailer
         output.flush();
