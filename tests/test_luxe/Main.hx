@@ -105,10 +105,12 @@ class Main extends luxe.Game {
             case Key.key_r:
                 trace('reset recorder');
                 recorder.reset();
+                progress = 0;
 
             case Key.key_3:
                 trace('commit recording');
                 recorder.commit();
+                progress = 0;
         }
     }
 
@@ -170,9 +172,8 @@ class Main extends luxe.Game {
                 case Recording:
                     color.set(0.968, 0.134, 0.019, 1);
                 case Paused:
-                    color.set(0.75, 0.75, 0.8, 1);
-                case Committed:
                     color.set(1, 0.493, 0.061, 1);
+                case Committed:
             }
 
             Luxe.draw.box({
