@@ -17,6 +17,7 @@ Add as a library dependency to your project.
 
 ### Usage
 
+The API is documented with more information and usage.
 Create a recorder:
 
 ```haxe
@@ -28,7 +29,8 @@ capture.onprogress = onprogress;
 capture.oncomplete = oncomplete;
 ```
 
-Start/pause/reset a recording:
+Start/pause/reset/commit a recording:
+Note you can record as much as you like before committing.
 
 ```haxe
     // start
@@ -43,6 +45,12 @@ Add frames, with the haxe.io.UInt8Array of bytes, the delay time for the frame t
 
 ```haxe
 recorder.add_frame(frame_bytes, frame_delay, flippedY);
+```
+
+You must call `recorder.update()` to propagate callbacks (frequently, i.e every frame is fine)
+
+```haxe
+recorder.update();
 ```
 
 ### Example
