@@ -15,7 +15,7 @@ class LuxeMoments {
 
         public var fps (default, set): Int = 30;
         public var state (get, never): RecorderState;
-        public var force_default_fbo: Bool = false;
+        public var force_default_fbo: Bool = true;
 
         public var color_busy: Color;
         public var color_paused: Color;
