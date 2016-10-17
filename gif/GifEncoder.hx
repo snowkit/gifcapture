@@ -46,7 +46,6 @@ class GifEncoder {
 
     var currentFrame:GifFrame;
     var pixels:UInt8Array;
-    var flippedY:Bool = false;
     var indexedPixels:UInt8Array;           // Converted frame indexed to palette
     var colorDepth:Int = 8;                 // Number of bit planes
     var colorTab:UInt8Array;                // RGB palette
@@ -81,24 +80,19 @@ class GifEncoder {
             Sets quality of color quantization (conversion of images to
             the maximum 256 colors allowed by the GIF specification). Lower values (minimum = 1)
             produce better colors, but slow processing significantly. Higher values will speed
-            up the quantization pass at the cost of lower image quality (maximum = 100).
-
-        flippedY:
-            If the frame is expected to be flipped during encoding for alternative coordinate systems */
+            up the quantization pass at the cost of lower image quality (maximum = 100). */
     public function new(
         _frame_width:Int,
         _frame_height:Int,
         _framerate:Int,
         _repeat:GifRepeat = GifRepeat.Infinite,
-        _quality:Int = 10,
-        _flippedY:Bool = false
+        _quality:Int = 10
     ) {
 
         width = _frame_width;
         height = _frame_height;
         framerate = _framerate;
         repeat = _repeat;
-        flippedY = _flippedY;
 
         sampleInterval = Std.int(clamp(_quality, 1, 100));
         usedEntry = [for (i in 0...256) false];
@@ -194,10 +188,9 @@ class GifEncoder {
     //helpers
 
         function get_pixels(frame:GifFrame):UInt8Array {
-            //
 
-                //if not flipped we can use the data as is
-            if (!flippedY) return frame.data;
+            //if not flipped we can use the data as is
+            if (!frame.flippedY) return frame.data;
 
                 //otherwise flip it, and return the cached array
             var stride = width * 3;
@@ -358,7 +351,8 @@ typedef GifFrame = {
             when encoded due to gif format requirements. If this value is negative,
             the default encoder frame rate will be used. */
     var delay: Float;
-
+        /** Whether or not this frame should be flipped on the Y axis */
+    var flippedY: Bool;
         /** Pixels data in unsigned bytes, rgb format */
     var data:UInt8Array;
 
