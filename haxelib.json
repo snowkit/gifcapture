@@ -1,9 +1,9 @@
 {
-	"name": "moments",
-	"url": "https://github.com/snowkit/moments",
+	"name": "gifcapture",
+	"url": "https://github.com/snowkit/gifcapture",
 	"license": "MIT",
 	"tags": [],
-	"description": "A gif recorder and encoder library",
+	"description": "A gif encoding recorder convenience library",
 	"version": "1.0.0-alpha",
 	"releasenote": "initial commit",
 	"contributors": [ "underscorediscovery", "keymaster" ],
