@@ -39,8 +39,7 @@ class Recorder {
         var frame_width:Int;
             /** Height of the gif */
         var frame_height:Int;
-            /** Whether or not to flip the frames */
-        var flipped:Bool = true;
+
             /** The actual gif encoder used in the background thread to save the gif. */
         var encoder:GifEncoder;
             /** The quality of the gif encoding. From 1 to 100, 1 being best quality but slowest processing, 100 being worst but fastest. */
@@ -55,6 +54,9 @@ class Recorder {
             /** The time it took for the last gif to encode. 
                 Should only be written to by the encoding thread. */
         var encoding_time:Float = 0;
+            /** The number of frames encoded. 
+                Should only be written to by the encoding thread. */
+        var encoding_count:Int = 0;
 
 
         /** Construct a new recorder object.
@@ -82,6 +84,8 @@ class Recorder {
 
         encoding_thread = Runner.thread(encoding_func);
 
+        reset();
+
     }
 
     public function destroy() {
@@ -107,25 +111,17 @@ class Recorder {
 
     public function record() {
 
-            //:todo:
-        if(state == Committed) {
-            print("Can't start recording again until encoding is complete");
-            return;
-        }
-
         state = Recording;
 
     } //record
 
     public function reset() {
 
-            //:todo:
-        // if (state == Committed) {
-        //     print("Can't reset the recorder while saving!");
-        //     return;
-        // }
+        added = 0;
 
         state = Paused;
+
+        encoding_thread.sendMessage(ThreadMessages.reset);
 
     } //reset
 
@@ -143,17 +139,18 @@ class Recorder {
 
 
         /** The frame recording function. Call this to add frames to the gif. */
-    public function add_frame(rgb_pixels:UInt8Array, frame_time:Float) {
+    public function add_frame(_rgb_pixels:UInt8Array, _frame_time:Float, _flippedY:Bool = false) {
 
         if(state != Recording) return;
 
         added++;
 
         var frame = {
-            width: frame_width,
-            height: frame_height,
-            delay: frame_time,
-            data: rgb_pixels
+            width:     frame_width,
+            height:    frame_height,
+            delay:    _frame_time,
+            data:     _rgb_pixels,
+            flippedY: _flippedY
         };
 
             //send the frame to the encoding thread
@@ -175,98 +172,111 @@ class Recorder {
         #end
     }
 
-    function encoding_func() {
+    //Background thread
 
-        var running = true;
-        var encoder = new GifEncoder(
-            frame_width,
-            frame_height,
-            frame_rate,
-            repeat,
-            quality,
-            flipped);
+        function encoding_func() {
 
-        var output = new BytesOutput();
-        var count = 0;
+            var encoder: GifEncoder = null;
+            var output: BytesOutput = null;
 
-        encoder.start(output);
+            Sys.println("background thread ready");
 
-        Sys.println("background thread ready");
+            while(true) {
 
-        while(running) {
+                var message = Thread.readMessage(false);
 
-            var message = Thread.readMessage(false);
+                switch(message) {
 
-            switch(message) {
+                    case ThreadMessages.abort: {
 
-                case ThreadMessages.abort: {
+                        break;
 
-                    running = false;
+                    } //abort
 
-                } //abort
+                    case ThreadMessages.reset: {
 
-                case ThreadMessages.commit: {
+                        encoder = null;
+                        output = null;
+                        encoding_count = 0;
+                        encoding_time = 0.0;
 
-                    encoder.commit(output);
+                        output = new BytesOutput();
+                        encoder = new GifEncoder(
+                            frame_width,
+                            frame_height,
+                            frame_rate,
+                            repeat,
+                            quality);
 
-                    Runner.call_primary(encoding_complete.bind(output));
+                        encoder.start(output);
 
-                } //commit
+                    } //reset
 
-                case ThreadMessages.frame: {
+                    case ThreadMessages.commit: {
 
-                    var frame:GifFrame = Thread.readMessage(true);
-                    var start = haxe.Timer.stamp();
+                        encoder.commit(output);
 
-                    encoder.add(output, frame);
+                        Runner.call_primary(encoding_complete.bind(output));
 
-                    encoding_time += haxe.Timer.stamp() - start;
+                    } //commit
 
-                    count++;
+                    case ThreadMessages.frame: {
 
-                    Runner.call_primary(encoding_progress.bind(count));
+                        var frame:GifFrame = Thread.readMessage(true);
+                        var start = haxe.Timer.stamp();
 
-                } //frame
+                        encoder.add(output, frame);
 
-                case _:
+                        encoding_time += haxe.Timer.stamp() - start;
 
-            } //switch(message)
+                        encoding_count++;
 
-            // Sys.sleep(0.0);
+                        Runner.call_primary(encoding_progress.bind(encoding_count));
 
-        } //while running
+                    } //frame
 
-    } //encoding_func
+                    case _:
 
-        /** Called at the end of the encoding process, 
-            queued to the primary thread from the encoding thread. */
-    function encoding_complete(output:BytesOutput) : Void {
+                } //switch(message)
 
-        print('Encoding finished. Encoding time was about ${encoding_time} seconds');
+                // Sys.sleep(0.0);
 
-        if(oncomplete != null) {
+            } //while running
 
-            var bytes = output.getBytes();
+        } //encoding_func
 
-            oncomplete(bytes);
+    //callbacks
 
-            bytes = null;
+            /** Called at the end of the encoding process, 
+                queued to the primary thread from the encoding thread. */
+        function encoding_complete(output:BytesOutput) : Void {
 
-        } //oncomplete != null
+            print('Encoding finished: took ~${encoding_time}s on ${encoding_count} frames');
 
-        output = null;
-        reset();
+            if(oncomplete != null) {
 
-    } //encoding_complete
+                var bytes = output.getBytes();
 
-        /** Fires the onprogress callback with a value between 0..1,
-            to indicate encoding progress. Called during the encoding process, 
-            queued to the primary thread from the encoding thread. */
-    function encoding_progress(index:Int) {
+                oncomplete(bytes);
 
-        if(onprogress != null) onprogress(index/added);
+                bytes = null;
 
-    } //encoding_progress
+            } //oncomplete != null
+
+            output = null;
+            
+            reset();
+
+        } //encoding_complete
+
+            /** Fires the onprogress callback with a value between 0..1,
+                to indicate encoding progress. Called during the encoding process, 
+                queued to the primary thread from the encoding thread. */
+        function encoding_progress(index:Int) {
+
+            if(onprogress != null) onprogress(index/added);
+
+        } //encoding_progress
 
 } //Recorder
 
@@ -278,7 +288,8 @@ enum RecorderState {
 
 @:enum
 abstract ThreadMessages(Int){
-    var abort = 1;
-    var frame = 2;
+    var abort  = 1;
+    var frame  = 2;
     var commit = 3;
+    var reset  = 4;
 }
