@@ -24,6 +24,11 @@ class Main extends luxe.Game {
     var progress:Float = 0.0;
     var progress_view:phoenix.Batcher;
 
+
+    static inline var fps = 50;
+    static inline var mspf = 1/fps;         
+    var gif_length = 5; //max length in seconds
+
     override function ready() {
 
         boxGeom = Luxe.draw.box( {
@@ -41,13 +46,25 @@ class Main extends luxe.Game {
 
         recorder = new Recorder(
             dest.width, dest.height, 
-            fps, 5, //max time
+            fps, gif_length, 
             GifQuality.Worst,
             GifRepeat.Infinite);
 
         recorder.onprogress = function(_progress:Float) {
             progress = _progress;
         }
+
+        recorder.oncomplete = function(_bytes:haxe.io.Bytes) {
+            
+            var path = dialogs.Dialogs.save('Save GIF');
+
+            if(path != '') {
+                sys.io.File.saveBytes(path, _bytes);
+            } else {
+                trace('No path chosen, file not saved!');
+            }
+
+        } //oncomplete
 
         progress_view = new phoenix.Batcher(Luxe.renderer, 'progress', 64);
         progress_view = Luxe.renderer.create_batcher({
@@ -76,32 +93,27 @@ class Main extends luxe.Game {
             case Key.space:
                 if (recorder.state == RecorderState.Paused) {
                     trace('turn on recording');
-                    recorder.record();
                     cpp.vm.Gc.enable(false);
-                }
-                else if (recorder.state == RecorderState.Recording) {
+                    recorder.record();
+                } else if (recorder.state == RecorderState.Recording) {
                     trace('pause recording');
                     recorder.pause();
                     cpp.vm.Gc.enable(true);
                 }
+
             case Key.key_r:
                 trace('reset recorder');
                 recorder.reset();
+
             case Key.key_3:
-                var path = dialogs.Dialogs.save('Save GIF');
-                if(path != '') {
-                    recorder.save(path);
-                } else{
-                    trace('GIF recorder / No file path specified, GIF will not be saved!');
-                }
+                trace('commit recording');
+                recorder.commit();
         }
     }
 
+
     var last_tick = 0.0;
     var accum = 0.0;
-    var fps = 50;
-    var mspf = 1/50; //1/fps
-
     function tick_end(_) {
 
         if(recorder.state == Recording) {
@@ -158,10 +170,8 @@ class Main extends luxe.Game {
                     color.set(0.968, 0.134, 0.019, 1);
                 case Paused:
                     color.set(0.75, 0.75, 0.8, 1);
-                case Maxed:
+                case Committed:
                     color.set(1, 0.493, 0.061, 1);
-                case Saving:
-                    //... not used currently
             }
 
             Luxe.draw.box({
