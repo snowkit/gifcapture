@@ -238,7 +238,7 @@ class GifCapture {
 
                 } //switch(message)
 
-                // Sys.sleep(0.0);
+                Sys.sleep(1/100); //Sleep the thread to allow other things to be scheduled and prevent this from using all of the cpu.
 
             } //while running
 
